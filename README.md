@@ -70,7 +70,7 @@ scalability and portability of the code.
 
 #### Compilation   
 
-1. **Full Paraview** 
+1. **Decaf Paraview** 
 
 a. Download [ParaView Source Code][PARAVIEW560]
 ```
