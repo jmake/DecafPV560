@@ -11,7 +11,6 @@ Scalable, Data analysis, Visualization
 1. [Compilation](#Compilation)
     1. [VTK / PARAVIEW / CATALYST](#subparagraph1)
 2. [PAAKAT](#PAAKAT)
-2. [NEK5K](#XXX)
 
 
 ------------
@@ -20,7 +19,6 @@ Compilation is divided in three main steps :
 
 1. **VTK** / **PARAVIEW** / **CATALYST**  
 2. **PAAKAT** 
-3. **NEK5K** 
 
 The Visualization Tookit [(VTK)][VTK] is used to manipulation and displaying of scientific data.
  
@@ -44,11 +42,11 @@ CATALYST uses the scaling capabilities of VTK and ParaView to suppor the *in sit
 
 Three levels of compilation are here considered : 
 
-1. **Full Paraview**  
+I. **Full Paraview**  
 
-2. **Partial Paraview** 
+II. **Partial Paraview** 
 
-3. **Decaf Paraview**
+III. **Decaf Paraview**
 
 
 *Full Paraview* 
@@ -68,13 +66,13 @@ in order to encourage
 scalability and portability of the code. 
 
 
-#### Compilation   
+#### Decaf Compilation   
 
-1. **Decaf Paraview** 
+1.III. **Decaf Paraview** 
 
-a. Download [ParaView Source Code][PARAVIEW560]
+a. Download ParaView Source Code
 ```
-Get ParaView-v5.6.0.tar.gz  
+git clone https://github.com/jmake/DecafPV560.git 
 ```
 [PARAVIEW560]:https://www.paraview.org/download/
 
