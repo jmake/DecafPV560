@@ -161,7 +161,7 @@ d. Compilation
 [100%] Built target vtkPVVTKExtensionsDefault
 ```
 
-Beskow, 16cores, ~5 min  
-Nord, 16cores, ~7 min
-
+Beskow, 16cores, ~5 min (2019) 
+Nord, 16cores, ~7 min (2020Jul)
+Juwels, 16 cores, ~20 min (2020Nov) 
 
