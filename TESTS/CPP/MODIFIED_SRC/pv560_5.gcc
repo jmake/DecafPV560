@@ -1,0 +1,139 @@
+#!/bin/bash
+#BSUB -n 17   
+#BSUB -oo output.out
+#BSUB -eo output.err
+#BSUB -J openmpi_example
+#BSUB -W 00:05  
+
+##  2019JUL03   
+##  bsub < run.sh   
+##  watch bjobs  
+##  bkill 
+
+module purge 
+module load intel/14.0.1 ## [1]
+module load gcc/7.2.0   
+module load PYTHON/3.5.0 
+module load openmpi/1.8.1 
+module load CMAKE/3.10.0   
+
+PV560_1()
+{  
+rm -rf CMakeCache.txt #CMakeFiles  
+
+cmake ../SRC560_1  \
+-DCMAKE_INSTALL_PREFIX=EXECS01 \
+-DPARAVIEW_BUILD_QT_GUI=OFF \
+-DCMAKE_CXX_FLAGS=-fpermissive \
+-DCMAKE_CXX_COMPILER=mpicxx  \
+-DCMAKE_C_COMPILER=mpicc \
+-DCMAKE_Fortran_COMPILER=mpif90 \
+  -DPARAVIEW_USE_ICE_T=OFF \
+  -DPARAVIEW_USE_MPI=ON \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DVTK_Group_ParaViewRendering=OFF \
+  -DVTK_USE_X=OFF \
+  -DVTK_OPENGL_HAS_OSMESA=OFF \
+  -DVTK_OPENGL_HAS_EGL=OFF \
+  -DModule_vtkIOExport=OFF \
+        -DVTK_BUILD_ALL_MODULES_FOR_TESTS=OFF \
+        -DVTK_Group_Rendering=OFF \
+        -DVTK_Group_StandAlone=OFF \
+        -DVTK_Group_MPI=ON \
+        -DModule_vtkCommonCore=ON \
+        -DModule_vtkFiltersGeneral=ON \
+        -DVTK_RENDERING_BACKEND=None \
+	-DPARAVIEW_ENABLE_VTK_MODULES_AS_NEEDED=FALSE \
+	-DModule_vtkVTKm=ON \
+	-DModule_vtkAcceleratorsVTKm=ON \
+	-DModule_vtkPVVTKExtensionsDefault=ON \
+	-DPARAVIEW_ENABLE_COMMANDLINE_TOOLS=OFF \
+        -DPARAVIEW_CURRENT_CS_MODULES= \
+
+}
+
+#
+# FROM : /home/bsc21/bsc21704/z2019_2/REPOSITORY/PV
+# 
+## 1.0. :)  
+PV560_1  
+
+## 2.0 
+#make -j128  
+make -j16 
+
+## 3.0 
+#make install 
+#
+
+
+## ParaViewCore/VTKExtensions/Default/CMakeLists.tx
+  #vtkPVExtractVOI.cxx
+  #vtkPVFrustumActor.cxx 
+  #vtkHybridProbeFilter.cxx
+  #vtkIsoVolume.cxx
+
+
+## ParaViewCore/VTKExtensions/Default/module.cmake 
+  #vtkPVVTKExtensionsRendering
+
+
+## CMake/ParaViewPluginsMacros.cmake +109  
+  #list (APPEND PARAVIEW_PLUGINS_ALL ${pv-plugin})
+
+
+## VTK/IO/Parallel/module.cmake 
+    #vtkIONetCDF
+    #vtkexodusII
+    #vtknetcdf
+
+
+## ParaViewCore/VTKExtensions/Default/module.cmake
+    #vtkIOParallelExodus
+    #vtkPVVTKExtensionsRendering
+    #vtknetcdfcpp
+
+
+## VTK/IO/ParallelNetCDF/module.cmake
+#vtk_module(vtkIOParallelNetCDF
+#  GROUPS
+#    MPI
+#  TEST_DEPENDS
+#    vtkCommonExecutionModel
+#    vtkRenderingOpenGL2
+#    vtkTestingRendering
+#    vtkInteractionStyle
+#  KIT
+#    vtkParallel
+#  DEPENDS
+#    vtkCommonExecutionModel
+#  PRIVATE_DEPENDS
+#    vtkCommonCore
+#    vtkCommonDataModel
+#    vtkParallelMPI
+#    vtknetcdf
+#  )
+
+
+## SEE : CMake/VTKModules.cmake
+# set( 
+#  ... 
+#  vtkFiltersSources
+#  # Needed for:
+#  #  vtkOutlineCornerFilter
+#  #  vtkGlyphSource2D
+#  #  vtkArrowSource
+#  ... 
+#  vtkIOXML
+#  # Needed for:
+#     ... 
+#  #  vtkXMLUnstructuredGridReader
+#     ... 
+#  #  vtkXMLMultiBlockDataReader
+#  ... 
+# ) 
+
+
+
+
+
