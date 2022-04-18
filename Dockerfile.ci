@@ -1,0 +1,15 @@
+FROM ubuntu 
+
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+
+RUN apt-get --yes -qq update 
+RUN apt-get --yes -qq install \
+                      g++ \
+                      gcc \
+                      gfortran \
+                      libopenmpi-dev \
+                      openmpi-bin \
+                      vim       \
+ RUN apt-get --yes -qq clean
+ RUN rm -rf /var/lib/apt/lists/*
