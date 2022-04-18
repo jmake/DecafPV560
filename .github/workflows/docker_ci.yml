@@ -18,10 +18,14 @@ jobs:
     - name: Dowloading repository ... 
       uses: actions/checkout@v2
       
-    - name: Build the Docker image
-      run: |
-        docker build . --file Dockerfile.ci 
-    
+    - name : Info ...
+      pwd 
+      ls -la 
+      
+#    - name: Build the Docker image
+#      run: |
+#        docker build . --file Dockerfile.ci 
+   
     
     
         
