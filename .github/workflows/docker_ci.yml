@@ -42,12 +42,13 @@ jobs:
         
         echo "[DOCKER] CREATING ..." 
         CONTAINER_ID=$(docker create ${IMAGE_NAME}:1.0 --volume ${PWD}:/WORKING_DIRECTORY/)
+        docker start ${CONTAINER_ID} 
         
         echo "[DOCKER] EXECUTING ..."  
         #docker cp ${CONTAINER_ID}:/home/jovyan/work/from_docker.ipynb ./
         #docker run -v ${PWD}:/BUILD/ ${CONTAINER_ID}
-        docker start ${CONTAINER_ID} 
-        docker exec ${CONTAINER_ID} ls -la /WORKING_DIRECTORY 
+        #docker start ${CONTAINER_ID} 
+        #docker exec ${CONTAINER_ID} ls -la /WORKING_DIRECTORY 
         
         docker rm -v $CONTAINER_ID
         
