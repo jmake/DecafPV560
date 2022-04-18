@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: DockerImageCI_2
 
 on: [push, workflow_dispatch]
 
@@ -28,7 +28,8 @@ jobs:
         shell: bash
         options: -v ${{ github.workspace }}:/home 
         run: |
-          ls -la  
           ls -la /home 
+          bash COMPILER.sh 
+          
         
              
