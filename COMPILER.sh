@@ -1,4 +1,4 @@
-PV560_1()
+CMAKE()
 {  
   cmake ../SRC  \
         -DCMAKE_INSTALL_PREFIX=EXECS01 \
@@ -45,8 +45,14 @@ SETUP_SYSTEM()
   rm -rf /var/lib/apt/lists/*
 }
 
+## 1. 
 SETUP_SYSTEM
 
-#PV560_1  
+## 2. 
+mkdir BUILD 
+cd BUILD 
+CMAKE
+
+## 3. 
 #make -j4 
 
