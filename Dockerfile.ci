@@ -7,16 +7,17 @@ RUN apt-get --yes -qq update
 
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
 
+RUN apt-get --yes -qq update 
+
+RUN apt-get --yes -qq install gfortran 
+
+
 #RUN DEBIAN_FRONTEND=noninteractive apt-get install tzdata --yes -qq 
-
 #ENV TZ=Europe/Sweden
-
 #RUN /bin/sh -c ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone 
 #RUN            ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
 #RUN /bin/sh -c dpkg-reconfigure --frontend noninteractive tzdata # buildkit
-
-RUN /bin/sh -c apt-get update # buildkit
+#RUN /bin/sh -c apt-get update # buildkit
 
 RUN /bin/sh -c apt-get -y install gfortran 
 
