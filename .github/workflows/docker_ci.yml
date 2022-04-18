@@ -37,7 +37,7 @@ jobs:
       run: |
         echo "[DOCKER] BUILDING ..."
         IMAGE_NAME=gh01
-        docker build . --file Dockerfile.ci -t $IMAGE_NAME:1.0 .
+        docker build . --file Dockerfile.ci -t $IMAGE_NAME:1.0 
         docker images
         
         echo "[DOCKER] CREATING ..." 
