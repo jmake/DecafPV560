@@ -19,8 +19,9 @@ jobs:
       uses: actions/checkout@v2
       
     - name : Info ...
-      pwd 
-      ls -la 
+      run : | 
+        pwd 
+        ls -la 
       
 #    - name: Build the Docker image
 #      run: |
