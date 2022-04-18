@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      max-parallel: 1
+      max-parallel: 4
       
     steps:
     - name: OS 
@@ -22,7 +22,9 @@ jobs:
       run : | 
         pwd 
         ls -la 
-      
+        mkdir BUILD 
+        cp COMPILER.sh BUILD 
+
 #    - name: Build the Docker image
 #      run: |
 #        docker build . --file Dockerfile.ci 
