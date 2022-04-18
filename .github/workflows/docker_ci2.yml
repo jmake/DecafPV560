@@ -23,7 +23,6 @@ jobs:
       with:
         image: ubuntu 
         options: -v ${ {github.workspace} }:/tmp 
-        run: |
-          uname -a   
+        run: ls   
         
              
