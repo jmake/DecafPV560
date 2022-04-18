@@ -41,11 +41,11 @@ jobs:
         docker images
         
         echo "[DOCKER] CREATING ..." 
-        CONTAINER_ID=$(docker create ${IMAGE_NAME}:1.0)
+        CONTAINER_ID=$(docker create ${IMAGE_NAME}:1.0 --volume ${PWD}/BUILD:/BUILD/)
         
         echo "[DOCKER] EXECUTING ..."  
         #docker cp ${CONTAINER_ID}:/home/jovyan/work/from_docker.ipynb ./
-        docker run -v ${PWD}:/BUILD/ ${CONTAINER_ID}
+        #docker run -v ${PWD}:/BUILD/ ${CONTAINER_ID}
         docker rm -v $CONTAINER_ID
         
         echo "[DOCKER] DONE!"         
