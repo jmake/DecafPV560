@@ -42,4 +42,4 @@ RUN apt-get --yes -qq clean
 RUN rm -rf /var/lib/apt/lists/*
 
 
-WORKDIR /BUILD
+WORKDIR /WORKING_DIRECTORY
