@@ -54,5 +54,5 @@ cd BUILD
 CMAKE
 
 ## 3. 
-#make -j4 
+make -j4 
 
