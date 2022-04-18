@@ -15,7 +15,7 @@ RUN apt-get --yes -qq install gfortran gcc g++
 
 RUN apt-get --yes -qq install openmpi-bin libopenmpi-dev  
 
-
+#
 #RUN DEBIAN_FRONTEND=noninteractive apt-get install tzdata --yes -qq 
 #ENV TZ=Europe/Sweden
 #RUN /bin/sh -c ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone 
@@ -24,10 +24,9 @@ RUN apt-get --yes -qq install openmpi-bin libopenmpi-dev
 #RUN /bin/sh -c apt-get update # buildkit
 #RUN /bin/sh -c apt-get -y install gfortran 
 #RUN /bin/sh -c apt-get -y install gcc g++ 
-RUN /bin/sh -c apt-get -y install build-essential 
-
-RUN /bin/sh -c apt-get -y install openmpi-bin libopenmpi-dev 
-
+#RUN /bin/sh -c apt-get -y install build-essential 
+#RUN /bin/sh -c apt-get -y install openmpi-bin libopenmpi-dev 
+#
 
 #RUN apt-get --yes -qq install \
 #                      g++ \
@@ -37,5 +36,5 @@ RUN /bin/sh -c apt-get -y install openmpi-bin libopenmpi-dev
 #                      openmpi-bin \
 #                      vim   
                     
-# RUN apt-get --yes -qq clean
-# RUN rm -rf /var/lib/apt/lists/*
+RUN apt-get --yes -qq clean
+RUN rm -rf /var/lib/apt/lists/*
