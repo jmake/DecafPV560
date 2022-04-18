@@ -43,10 +43,12 @@ jobs:
         
         echo "[DOCKER] CREATING ..." 
         CONTAINER_ID=$(docker create ${IMAGE_NAME}:1.0 --volume ${PWD}:/WORKING_DIRECTORY/ --name ${CONTAINER_NAME})
+        
+        docker start ${CONTAINER_NAME} 
         docker ps 
-        #docker start ${CONTAINER_ID} 
+        
         #docker run --rm --name ${CONTAINER_NAME} 
-        docker exec ${CONTAINER_NAME} ls -la 
+        #docker exec ${CONTAINER_NAME} ls -la 
         
         
         echo "[DOCKER] EXECUTING ..."  
