@@ -22,7 +22,8 @@ jobs:
       uses: addnab/docker-run-action@v3
       with:
         image: ubuntu 
-        options: -v ${ {github.workspace} }:/tmp 
-        run: ls   
+        shell: bash
+        options: -v ${{ github.workspace }}:/tmp 
+        run: ls -la  
         
              
