@@ -29,6 +29,6 @@ jobs:
         options: -v ${{ github.workspace }}:/tmp 
         run: |
           ls -la  
-          ls -la /home/* 
+          ls -la /home 
         
              
