@@ -10,6 +10,6 @@ RUN apt-get --yes -qq install \
                       gfortran \
                       libopenmpi-dev \
                       openmpi-bin \
-                      vim       \
+                      vim   
  RUN apt-get --yes -qq clean
  RUN rm -rf /var/lib/apt/lists/*
