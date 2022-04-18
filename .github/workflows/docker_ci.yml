@@ -20,10 +20,12 @@ jobs:
       
     - name : Info ...
       run : | 
-        pwd 
-        ls -la 
+        
         mkdir BUILD 
         cp COMPILER.sh BUILD 
+        ls -la  
+        ls -la BUILD 
+        pwd 
 
 #    - name: Build the Docker image
 #      run: |
