@@ -1,0 +1,29 @@
+name: Docker Image CI
+
+on: [push, workflow_dispatch]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+    
+    strategy:
+      max-parallel: 4
+      
+    steps:
+    - name: OS 
+      run: uname -a   
+      
+    - name: Check out the repo
+      uses: actions/checkout@v2
+            
+    - name: Run the build process with Docker
+      uses: addnab/docker-run-action@v3
+      with:
+        image: ubuntu 
+        options: -v ${ {github.workspace} }:/WORKING_DIRECTORY 
+        run: |
+          uname -a   
+        
+             
