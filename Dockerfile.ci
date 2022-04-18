@@ -3,9 +3,9 @@ FROM ubuntu
 #ENV LANG C.UTF-8
 #ENV LC_ALL C.UTF-8
 
-RUN apt-get -yes -qq update 
+RUN apt-get --yes -qq update 
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install tzdata -yes -qq 
+RUN DEBIAN_FRONTEND=noninteractive apt-get install tzdata --yes -qq 
 
 ENV TZ=Europe/Sweden
 
