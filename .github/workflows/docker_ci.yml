@@ -46,7 +46,7 @@ jobs:
         echo "[DOCKER] EXECUTING ..."  
         #docker cp ${CONTAINER_ID}:/home/jovyan/work/from_docker.ipynb ./
         #docker run -v ${PWD}:/BUILD/ ${CONTAINER_ID}
-        docker run --rm ${CONTAINER_ID} ls -la /WORKING_DIRECTORY 
+        docker exec ${CONTAINER_ID} ls -la /WORKING_DIRECTORY 
         
         docker rm -v $CONTAINER_ID
         
