@@ -32,7 +32,21 @@ PV560_1()
 }
 
  
-PV560_1  
+SETUP_SYSTEM() 
+{
+  apt-get --yes -qq update 
+  DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
+  apt-get --yes -qq update 
+  apt-get --yes -qq install build-essential  
+  apt-get --yes -qq install gfortran gcc g++  
+  apt-get --yes -qq install openmpi-bin libopenmpi-dev  
+  apt-get --yes -qq install cmake 
+  apt-get --yes -qq clean
+  rm -rf /var/lib/apt/lists/*
+}
 
-make -j4 
+SETUP_SYSTEM
+
+#PV560_1  
+#make -j4 
 
