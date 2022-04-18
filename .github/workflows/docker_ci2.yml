@@ -29,6 +29,7 @@ jobs:
         options: -v ${{ github.workspace }}:/home 
         run: |
           ls -la /home 
+          cd /home/
           bash COMPILER.sh 
           
         
