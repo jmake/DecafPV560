@@ -27,11 +27,19 @@ jobs:
     
     - name: Executing Docker ...  
       if: success()
+      
+      env:
+        DUSERNAME: ${{ secrets.DOCKER_HUB_USERNAME }} # jmake
+        DPASSWORD: ${{ secrets.DOCKER_HUB_TOKEN }}    # https://hub.docker.com/settings/security >> Access Tokens 
+        DREPOSITORY: ${{ secrets.DOCKER_HUB_TOKEN }}  # decafpv560
+        
       run: |
       
         echo "[DOCKER] BUILDING ..."
         
-        IMAGE_NAME=i01a:$GITHUB_SHA
+        IMAGE_NAME=${DUSERNAME}/${DREPOSITORY}:$(date +%s)
+        
+        docker login -u ${DUSERNAME} -p ${DPASSWORD}
         
         docker build . \
         --file Dockerfile.ci \
@@ -63,7 +71,8 @@ jobs:
 
         echo "[DOCKER] PUSHING ..." 
         
-        echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
+        
+        #echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
         #docker push \
         #docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
         
