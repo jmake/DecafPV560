@@ -36,28 +36,36 @@ jobs:
       if: success()
       run: |
         echo "[DOCKER] BUILDING ..."
-        IMAGE_NAME=gh01
-        CONTAINER_NAME=container01
-        docker build . --file Dockerfile.ci -t $IMAGE_NAME:1.0 
-        docker images
+        IMAGE_NAME=I01a
+        CONTAINER_NAME=C01a
+        docker build . --file Dockerfile.ci -t $IMAGE_NAME
+        IMAGE_ID=$(docker images --filter=reference=$IMAGE_NAME --format "{{.ID}}") 
+        echo "IMAGE_ID:", $IMAGE_ID
         
         echo "[DOCKER] CREATING ..." 
-        CONTAINER_ID=$(docker create ${IMAGE_NAME}:1.0 --volume ${PWD}:/WORKING_DIRECTORY/ --name ${CONTAINER_NAME})
+        docker run \
+          --name ${CONTAINER_NAME} \
+          --volume ${{ github.workspace }}:/home \
+          --rm -it ${IMAGE_NAME} pwd
         
-        docker start ${CONTAINER_NAME} 
-        docker ps 
+        #docker create ${IMAGE_NAME} --volume ${PWD}:/WORKING_DIRECTORY/ --name ${CONTAINER_NAME}
+          
+        #CONTAINER_ID=$(docker create ${IMAGE_NAME}:1.0 --volume ${{ github.workspace }}:/home --name ${CONTAINER_NAME})
+        
+        #docker start ${CONTAINER_NAME} 
+        #docker ps 
         
         #docker run --rm --name ${CONTAINER_NAME} 
         #docker exec ${CONTAINER_NAME} ls -la 
-        
-        
-        echo "[DOCKER] EXECUTING ..."  
+        #
+        #
+        #echo "[DOCKER] EXECUTING ..."  
         #docker cp ${CONTAINER_ID}:/home/jovyan/work/from_docker.ipynb ./
         #docker run -v ${PWD}:/BUILD/ ${CONTAINER_ID}
         #docker start ${CONTAINER_ID} 
         #docker exec ${CONTAINER_ID} ls -la /WORKING_DIRECTORY 
-        
-        docker rm -v $CONTAINER_ID
+        #
+        #docker rm -v $CONTAINER_ID
         
         echo "[DOCKER] DONE!"         
         
