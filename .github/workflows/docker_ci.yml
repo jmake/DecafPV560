@@ -69,8 +69,11 @@ jobs:
 #        DOCKER_PASSWORD: ${{ secrets.DOCKER_HUB_TOKEN }}    # https://hub.docker.com/settings/security >> Access Tokens 
 #        DOCKER_REPOSITORY: ${{ secrets.DOCKER_HUB_TOKEN }}  # decafpv560
         
-    - name: Pushing the Docker image
+    - name: Pushing the Docker Image ...
       run: |
+      
+        echo "IMAGE_NAME:",${IMAGE_NAME}
+        
         echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
         
         #docker build . --file Dockerfile.swig --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
