@@ -43,12 +43,19 @@ jobs:
         echo "IMAGE_ID:", $IMAGE_ID
         
         echo "[DOCKER] CREATING ..." 
+        
         docker run \
           --name ${CONTAINER_NAME} \
           --volume ${{ github.workspace }}:/home \
           --workdir /home \
           --rm -i ${IMAGE_NAME} pwd
-        
+
+        docker run \
+          --name ${CONTAINER_NAME} \
+          --volume ${{ github.workspace }}:/home \
+          --workdir /home \
+          --rm -i ${IMAGE_NAME} ls 
+
         #docker create ${IMAGE_NAME} --volume ${PWD}:/WORKING_DIRECTORY/ --name ${CONTAINER_NAME}
           
         #CONTAINER_ID=$(docker create ${IMAGE_NAME}:1.0 --volume ${{ github.workspace }}:/home --name ${CONTAINER_NAME})
