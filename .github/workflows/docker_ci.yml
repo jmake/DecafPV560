@@ -5,7 +5,7 @@ on: [push, workflow_dispatch]
 env:
   CONTAINER_NAME: c01a
   #IMAGE_NAME: i01a
-  IMAGE_NAME: docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
+  #IMAGE_NAME: docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
 
 jobs:
 
@@ -35,7 +35,7 @@ jobs:
         
         #CONTAINER_NAME=c01a
         #IMAGE_NAME=i01a
-        #IMAGE_NAME=docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
+        IMAGE_NAME=docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
         
         docker build . \
         --file Dockerfile.ci \
@@ -43,6 +43,8 @@ jobs:
         
         IMAGE_ID=$(docker images --filter=reference=$IMAGE_NAME --format "{{.ID}}") 
         echo "IMAGE_ID:", $IMAGE_ID
+        
+        docker images 
         
         
         echo "[DOCKER] CREATING ..." 
