@@ -47,6 +47,8 @@ jobs:
         
         IMAGE_ID=$(docker images --filter=reference=$IMAGE_NAME --format "{{.ID}}") 
         echo "IMAGE_ID:", $IMAGE_ID
+        
+        docker images
                 
         echo "[DOCKER] CREATING ..." 
         
@@ -70,6 +72,8 @@ jobs:
 
 
         echo "[DOCKER] PUSHING ..." 
+        
+        docker push ${IMAGE_NAME} #jmake/decafpv560:tagname
         
         
         #echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
