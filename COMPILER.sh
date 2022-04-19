@@ -47,13 +47,12 @@ CMAKE()
 }
 
 ## 1. 
-#SETUP_SYSTEM ## USED BY 'docker_ci2.yml' 
+SETUP_SYSTEM 
 
 ## 2. 
 mkdir BUILD 
 cd BUILD 
-#CMAKE
+CMAKE
 
 ## 3. 
-#make -j4 
-
+make -j4 
