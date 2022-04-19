@@ -13,23 +13,14 @@ jobs:
       
     steps:
     - name: OS 
-      run: uname -a   
+      run: | 
+        ls -la 
+        pwd 
+        uname -a   
       
     - name: Dowloading repository ... 
       uses: actions/checkout@v2
       
-    - name : Info ...
-      run : | 
-        #mkdir BUILD 
-        #cp COMPILER.sh BUILD 
-        ls -la  
-        #ls -la BUILD 
-        pwd 
-
-    - name: Build Docker ... 
-      run: |
-        docker build . --file Dockerfile.ci 
-   
     
     - name: Executing Docker ...  
       if: success()
@@ -37,10 +28,14 @@ jobs:
       
         echo "[DOCKER] BUILDING ..."
         
-        IMAGE_NAME=i01a
         CONTAINER_NAME=c01a
+        IMAGE_NAME=i01a
+        IMAGE_NAME=docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
         
-        docker build . --file Dockerfile.ci -t $IMAGE_NAME
+        docker build . \
+        --file Dockerfile.ci \
+        --tag $IMAGE_NAME
+        
         IMAGE_ID=$(docker images --filter=reference=$IMAGE_NAME --format "{{.ID}}") 
         echo "IMAGE_ID:", $IMAGE_ID
         
@@ -65,6 +60,22 @@ jobs:
           --workdir /home \
           --rm -i ${IMAGE_NAME} ls BUILD 
         
-        echo "[DOCKER] DONE!"         
+        echo "[DOCKER] DONE!"    
+        
+#    - name: Login to Docker Hub ... 
+#      uses: actions-hub/docker/login@master
+#      env:
+#        DOCKER_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }} # jmake
+#        DOCKER_PASSWORD: ${{ secrets.DOCKER_HUB_TOKEN }}    # https://hub.docker.com/settings/security >> Access Tokens 
+#        DOCKER_REPOSITORY: ${{ secrets.DOCKER_HUB_TOKEN }}  # decafpv560
+        
+    - name: Pushing the Docker image
+      run: |
+        echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
+        
+        #docker build . --file Dockerfile.swig --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
+        
+        #docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA       
+        
         
         
