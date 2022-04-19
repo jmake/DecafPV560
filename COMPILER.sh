@@ -47,7 +47,7 @@ CMAKE()
 }
 
 ## 1. 
-#SETUP_SYSTEM ## USED BY 'docker_ci2.yml' 
+SETUP_SYSTEM ## USED BY 'docker_ci2.yml' 
 
 ## 2. 
 mkdir BUILD 
