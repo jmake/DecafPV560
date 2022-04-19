@@ -31,7 +31,7 @@ jobs:
       env:
         DUSERNAME: ${{ secrets.DOCKER_HUB_USERNAME }} # jmake
         DPASSWORD: ${{ secrets.DOCKER_HUB_TOKEN }}    # https://hub.docker.com/settings/security >> Access Tokens 
-        DREPOSITORY: ${{ secrets.DOCKER_HUB_TOKEN }}  # decafpv560
+        DREPOSITORY: ${{ secrets.DOCKER_HUB_REPOSITORY }}  # decafpv560
         
       run: |
       
