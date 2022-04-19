@@ -64,25 +64,6 @@ jobs:
           --volume ${{ github.workspace }}:/home \
           --workdir /home \
           --rm -i ${IMAGE_NAME} ls BUILD 
-
-        #docker create ${IMAGE_NAME} --volume ${PWD}:/WORKING_DIRECTORY/ --name ${CONTAINER_NAME}
-          
-        #CONTAINER_ID=$(docker create ${IMAGE_NAME}:1.0 --volume ${{ github.workspace }}:/home --name ${CONTAINER_NAME})
-        
-        #docker start ${CONTAINER_NAME} 
-        #docker ps 
-        
-        #docker run --rm --name ${CONTAINER_NAME} 
-        #docker exec ${CONTAINER_NAME} ls -la 
-        #
-        #
-        #echo "[DOCKER] EXECUTING ..."  
-        #docker cp ${CONTAINER_ID}:/home/jovyan/work/from_docker.ipynb ./
-        #docker run -v ${PWD}:/BUILD/ ${CONTAINER_ID}
-        #docker start ${CONTAINER_ID} 
-        #docker exec ${CONTAINER_ID} ls -la /WORKING_DIRECTORY 
-        #
-        #docker rm -v $CONTAINER_ID
         
         echo "[DOCKER] DONE!"         
         
