@@ -2,11 +2,9 @@ name: Docker Image CI
 
 on: [push, workflow_dispatch]
 
-
 jobs:
 
   build:
-
     runs-on: ubuntu-latest
 
     strategy:
@@ -27,17 +25,19 @@ jobs:
       if: success()
       
       env:
-        DUSERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}      # jmake
+        ## SEE : 
+        ##      https://hub.docker.com/repository/docker/${DUSERNAME}/${DREPOSITORY}
+        ## 
         DPASSWORD: ${{ secrets.DOCKER_HUB_TOKEN }}         # https://hub.docker.com/settings/security >> Access Tokens 
-        DREPOSITORY: ${{ secrets.DOCKER_HUB_REPOSITORY }}  # decafpv560
+        DUSERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}      # 
+        DREPOSITORY: ${{ secrets.DOCKER_HUB_REPOSITORY }}  # 
 
-      run: |
+      run: | 
       
-        echo "[DOCKER] BUILDING ..."
-        
         CONTAINER_NAME=c01a
         IMAGE_NAME=${DUSERNAME}/${DREPOSITORY}:$(date +%s)
         
+        echo "[DOCKER] BUILDING ..."
         docker login -u ${DUSERNAME} -p ${DPASSWORD}
         
         docker build . \
@@ -45,9 +45,8 @@ jobs:
         --tag $IMAGE_NAME
         
         IMAGE_ID=$(docker images --filter=reference=$IMAGE_NAME --format "{{.ID}}") 
-        echo "IMAGE_ID:", $IMAGE_ID
+        #echo "IMAGE_ID:", $IMAGE_ID
         
-        docker images
                 
         echo "[DOCKER] CREATING ..." 
         
@@ -71,10 +70,6 @@ jobs:
 
 
         echo "[DOCKER] PUSHING ...", $(date +%s)
-
-        ## SEE : 
-        ##      https://hub.docker.com/repository/docker/${DUSERNAME}/${DREPOSITORY}
-        ## 
         docker push ${IMAGE_NAME} 
 
 
