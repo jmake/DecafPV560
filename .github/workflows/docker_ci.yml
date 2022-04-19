@@ -46,7 +46,7 @@ jobs:
         docker run \
           --name ${CONTAINER_NAME} \
           --volume ${{ github.workspace }}:/home \
-          --rm -it ${IMAGE_NAME} pwd
+          --rm -i ${IMAGE_NAME} pwd
         
         #docker create ${IMAGE_NAME} --volume ${PWD}:/WORKING_DIRECTORY/ --name ${CONTAINER_NAME}
           
