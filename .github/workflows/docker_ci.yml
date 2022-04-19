@@ -36,8 +36,8 @@ jobs:
       if: success()
       run: |
         echo "[DOCKER] BUILDING ..."
-        IMAGE_NAME=I01a
-        CONTAINER_NAME=C01a
+        IMAGE_NAME=i01a
+        CONTAINER_NAME=c01a
         docker build . --file Dockerfile.ci -t $IMAGE_NAME
         IMAGE_ID=$(docker images --filter=reference=$IMAGE_NAME --format "{{.ID}}") 
         echo "IMAGE_ID:", $IMAGE_ID
