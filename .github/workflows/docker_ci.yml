@@ -20,27 +20,30 @@ jobs:
       
     - name : Info ...
       run : | 
-        
-        mkdir BUILD 
-        cp COMPILER.sh BUILD 
+        #mkdir BUILD 
+        #cp COMPILER.sh BUILD 
         ls -la  
-        ls -la BUILD 
+        #ls -la BUILD 
         pwd 
 
-    - name: Build the Docker image
+    - name: Build Docker ... 
       run: |
         docker build . --file Dockerfile.ci 
    
     
-    - name: Executing Docker image 
+    - name: Executing Docker ...  
       if: success()
       run: |
+      
         echo "[DOCKER] BUILDING ..."
+        
         IMAGE_NAME=i01a
         CONTAINER_NAME=c01a
+        
         docker build . --file Dockerfile.ci -t $IMAGE_NAME
         IMAGE_ID=$(docker images --filter=reference=$IMAGE_NAME --format "{{.ID}}") 
         echo "IMAGE_ID:", $IMAGE_ID
+        
         
         echo "[DOCKER] CREATING ..." 
         
@@ -54,7 +57,13 @@ jobs:
           --name ${CONTAINER_NAME} \
           --volume ${{ github.workspace }}:/home \
           --workdir /home \
-          --rm -i ${IMAGE_NAME} ls 
+          --rm -i ${IMAGE_NAME} bash COMPILER.sh 
+
+        docker run \
+          --name ${CONTAINER_NAME} \
+          --volume ${{ github.workspace }}:/home \
+          --workdir /home \
+          --rm -i ${IMAGE_NAME} ls BUILD 
 
         #docker create ${IMAGE_NAME} --volume ${PWD}:/WORKING_DIRECTORY/ --name ${CONTAINER_NAME}
           
