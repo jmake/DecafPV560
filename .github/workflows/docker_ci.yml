@@ -2,8 +2,6 @@ name: Docker Image CI
 
 on: [push, workflow_dispatch]
 
-env:
-  CONTAINER_NAME: c01a
 
 jobs:
 
@@ -29,14 +27,15 @@ jobs:
       if: success()
       
       env:
-        DUSERNAME: ${{ secrets.DOCKER_HUB_USERNAME }} # jmake
-        DPASSWORD: ${{ secrets.DOCKER_HUB_TOKEN }}    # https://hub.docker.com/settings/security >> Access Tokens 
+        DUSERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}      # jmake
+        DPASSWORD: ${{ secrets.DOCKER_HUB_TOKEN }}         # https://hub.docker.com/settings/security >> Access Tokens 
         DREPOSITORY: ${{ secrets.DOCKER_HUB_REPOSITORY }}  # decafpv560
-        
+
       run: |
       
         echo "[DOCKER] BUILDING ..."
         
+        CONTAINER_NAME=c01a
         IMAGE_NAME=${DUSERNAME}/${DREPOSITORY}:$(date +%s)
         
         docker login -u ${DUSERNAME} -p ${DPASSWORD}
@@ -71,36 +70,12 @@ jobs:
           --rm -i ${IMAGE_NAME} ls BUILD 
 
 
-        echo "[DOCKER] PUSHING ..." 
-        
-        docker push ${IMAGE_NAME} #jmake/decafpv560:tagname
-        
-        
-        #echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
-        #docker push \
-        #docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
-        
+        echo "[DOCKER] PUSHING ...", $(date +%s)
+
+        ## SEE : 
+        ##      https://hub.docker.com/repository/docker/${DUSERNAME}/${DREPOSITORY}
+        ## 
+        docker push ${IMAGE_NAME} 
+
 
         echo "[DOCKER] DONE!! :) "    
-
-
-#    - name: Login to Docker Hub ... 
-#      uses: actions-hub/docker/login@master
-#      env:
-#        DOCKER_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }} # jmake
-#        DOCKER_PASSWORD: ${{ secrets.DOCKER_HUB_TOKEN }}    # https://hub.docker.com/settings/security >> Access Tokens 
-#        DOCKER_REPOSITORY: ${{ secrets.DOCKER_HUB_TOKEN }}  # decafpv560
-        
-    - name: Pushing the Docker Image ...
-      run: |
-      
-        echo "IMAGE_NAME:",${IMAGE_NAME}
-        
-        #echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin docker.io
-        
-        #docker build . --file Dockerfile.swig --tag docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA
-        
-        #docker push docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:$GITHUB_SHA       
-        
-        
-        
