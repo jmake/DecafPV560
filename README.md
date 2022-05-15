@@ -1,6 +1,8 @@
 PAAKAT -- Insitu analysis 
 =====================================
 
+![example workflow](https://github.com/jmake/DecafPV560/actions/workflows/docker_ci.yml/badge.svg)
+
 
 Motivation
 ----------
