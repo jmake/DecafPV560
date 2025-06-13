@@ -21,7 +21,7 @@ jobs:
     - name: CHECKING OUT REPO ...
       uses: actions/checkout@v4
             
-    - name: BUILDING PROCESS ... 
+    - name: SETUP PROCESS ... 
       run: |
         SETUP_SYSTEM() 
         {
@@ -35,10 +35,18 @@ jobs:
           #apt-get --yes -qq clean
           #rm -rf /var/lib/apt/lists/*
         }
-
         SETUP_SYSTEM 
 
+    - name: BUILDING PROCESS ... 
+      run: |
+        mkdir BUILD 
+        cd BUILD 
+        CMAKE
+        
+        make -j4 
 
-          
+        ls -la 
+
+        find .
         
              
