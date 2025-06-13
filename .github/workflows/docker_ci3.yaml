@@ -42,7 +42,7 @@ jobs:
         CMAKE()
         {  
           cmake ../SRC  \
-                -DCMAKE_INSTALL_PREFIX=EXECS01 \
+                -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/EXECS01 \
                 -DPARAVIEW_BUILD_QT_GUI=OFF \
                 -DCMAKE_CXX_FLAGS=-fpermissive \
                 -DCMAKE_CXX_COMPILER=mpicxx  \
@@ -77,9 +77,19 @@ jobs:
         CMAKE
         
         make -j4 
-
+        ls -la 
+        pwd 
+        
+        make install
         ls -la 
 
-        find .
+
+    - name: upload-artifact
+      if: success() 
+      uses: actions/upload-artifact@v4
+      with:
+        name: ArtifactName3
+        path: ${{ github.workspace }}/EXECS01 
+
         
              
