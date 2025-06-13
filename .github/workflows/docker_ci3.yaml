@@ -1,6 +1,6 @@
 name: docker_ci3
 
-on: [push, workflow_dispatch]
+on: [workflow_dispatch] # push 
 
 jobs:
 
