@@ -1,0 +1,8 @@
+[wsl2]
+memory=16GB             # (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB
+swap=16GB               # == memory 
+processors=6           # (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors 
+localhostForwarding=true  # Enables localhost to Windows port forwarding
+
+## C:\Users\<YourUsername>\.wslconfig
+## wsl --shutdown
