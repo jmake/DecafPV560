@@ -91,5 +91,11 @@ jobs:
         name: ArtifactName3
         path: ${{ github.workspace }}/EXECS01 
 
-        
+    - env :
+          GH_TOKEN: ${{ secrets.TOKEN4 }} 
+      if: success() 
+      run : |
+        source "$GITHUB_WORKSPACE/Tools/tools.sh"
+        release_with_artifact '${{ github.repository }}' '${{ github.actor }}' "TagX.Y.Z" ${{ github.workspace }}/EXECS01
+    
              
