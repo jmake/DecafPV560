@@ -1,6 +1,6 @@
-name: Docker Image CI
+name: docker_ci
 
-on: [push, workflow_dispatch]
+on: [workflow_dispatch] # push 
 
 jobs:
 
