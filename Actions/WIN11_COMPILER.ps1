@@ -25,6 +25,19 @@ function CL_SETUP
   ninja.exe --version 
 }
 
+<#---------------------------------------------------------------------------------------------#>
+function ExecutionTime {
+    param (
+        [ScriptBlock]$ScriptToMeasure
+    )
+    $stopwatch = [System.Diagnostics.Stopwatch]::new()
+    $stopwatch.Start()
+    & $ScriptToMeasure
+    $stopwatch.Stop()
+    Write-Host "Execution Time: $($stopwatch.Elapsed)"
+    return $stopwatch.Elapsed
+}
+
 
 <#---------------------------------------------------------------------------------------------#>
 function CMAKE()
@@ -48,7 +61,7 @@ function CMAKE()
             -B $FolderName `
             -DCMAKE_INSTALL_PREFIX=Execs `
             -DPARAVIEW_BUILD_QT_GUI=OFF `
-            -DCMAKE_CXX_FLAGS="/EHsc /D HAVE_SNPRINTF" `
+            -DCMAKE_CXX_FLAGS="/EHsc " `
             -DCMAKE_CXX_COMPILER=cl  `
             -DCMAKE_C_COMPILER=cl `
             -DPARAVIEW_USE_ICE_T=OFF `
@@ -98,7 +111,7 @@ function COMPILATION
     Set-Location -Path ${FolderName} 
     Get-ChildItem
 
-    CMAKE 
+    ExecutionTime { CMAKE } 
 
     Set-Location -Path ${EXECUTION_PATH} 
 } 
