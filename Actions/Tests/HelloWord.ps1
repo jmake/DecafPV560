@@ -34,6 +34,11 @@ function COMPILATION
 
     Write-Host "[COMPILATION] ... " #-NoNewline
 
+    $VTK_PATH="${EXECUTION_PATH}\Compilation\Build\VTK"
+
+    $SELF_PATH="${EXECUTION_PATH}\Actions\Tests\HelloWord" 
+    Set-Location -Path $SELF_PATH
+
     $ExecutablePath="Execs"
     if (Test-Path  $ExecutablePath){Remove-Item -Recurse -Force  $ExecutablePath}
 
@@ -43,7 +48,6 @@ function COMPILATION
     #Set-Location -Path ${FolderName} 
     #Get-ChildItem
 
-    $VTK_PATH="F:\z2025_1\Dicom\DecafPV560\Compilation\Build\VTK"
     cmake.exe -S . `
     -G "Ninja" `
     -B  $CompilationPath `
