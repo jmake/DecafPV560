@@ -435,9 +435,20 @@
 /* Define strcasecmp, snprintf on Win32 systems. */
 #ifdef _WIN32
 	#define strcasecmp _stricmp
+/*
+ERROR : vtknetcdf\config.h(439): note: see previous definition of 'snprintf' 
+MSVC 2015+ (version 1900+) supports standard snprintf. This patch avoids redefining it if unnecessary.
+*/
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#  ifndef HAVE_SNPRINTF
+#    define snprintf _snprintf
+#  endif
+#endif
+/*
 #ifndef HAVE_SNPRINTF
 	#define snprintf _snprintf
 #endif
+*/
 #endif
 
 #include "ncconfigure.h"
