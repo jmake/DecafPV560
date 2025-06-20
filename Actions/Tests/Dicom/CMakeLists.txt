@@ -13,10 +13,16 @@ list(APPEND LIBS vtkPVCatalyst vtkPVVTKExtensionsDefault vtkPVClientServerCoreCo
 find_package(ParaView REQUIRED COMPONENTS ${LIBS})
 include("${PARAVIEW_USE_FILE}")
 
+## Library
+FILE(GLOB SRCs *.cpp)
+##add_library(PAAKAT ${SRCs})
 
 ## Executable
 set(exec01 SpicyTech)  
-add_executable(${exec01} main.cpp)  
+
+##add_executable(${exec01} main.cpp)  
+add_executable(${exec01} ${SRCs})  
+
 set_property(TARGET ${exec01} PROPERTY LINKER_LANGUAGE CXX)
 target_link_libraries(${exec01} ${LIBS})   
 

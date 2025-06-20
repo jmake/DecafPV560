@@ -1,6 +1,6 @@
-#pragma once 
-//#ifndef VTK_TOOLS_H  
-//#define VTK_TOOLS_H 
+//#pragma once 
+#ifndef VTK_TOOLS_H  
+#define VTK_TOOLS_H 
 
 #include <iostream> // cin, cout, endl, cerr
 #include <vector>   // vector
@@ -24,18 +24,286 @@
 #include <vtkCompositeDataSet.h>
 #include <vtkDataObject.h>
 
-#include <vtkUnstructuredGrid.h>
 #include <vtkFileOutputWindow.h>
 
+#include <vtkExtractGeometry.h>
+#include <vtkImplicitFunction.h>
+
+#include <vtkFileOutputWindow.h>
+
+#include <vtkXMLWriter.h>
+#include <vtkXMLPolyDataWriter.h>
+#include <vtkXMLImageDataWriter.h>
+#include <vtkXMLUnstructuredGridWriter.h>
+
+#include <vtkNew.h>
+#include <vtkSmartPointer.h>
+#include <vtkCompleteArrays.h>
+
+#include <vtkBox.h>
+#include <vtkPlane.h>
+#include <vtkCutter.h>
+#include <vtkContourFilter.h>
+
+#include <vtkPolyData.h>
+#include <vtkImageData.h>
+#include <vtkStructuredGrid.h>
+#include <vtkUnstructuredGrid.h>
+
+#include <vtkXMLImageDataReader.h>
+
+#include <vtkDataSet.h>
+#include <vtkBoundingBox.h>
+
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
-void Warning( std::string fname )
+void VtkWarning( std::string fname )
 {
   vtkFileOutputWindow *outwin = vtkFileOutputWindow::New();
-  outwin->SetFileName( fname.c_str() );
+  outwin->SetFileName( fname.c_str() );    
   outwin->SetInstance(outwin);
 }
+
+
+template <typename T>
+void PrintVector(const std::vector<T>& vec)
+{
+    std::cout << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        std::cout << vec[i];
+        if (i + 1 < vec.size())
+            std::cout << ", ";
+    }
+    std::cout << "]" << std::endl;
+}
+
+
+std::vector<double> GetGeometricCenter(vtkDataObject* obj)
+{
+    auto data = vtkDataSet::SafeDownCast(obj);
+    assert(data);
+
+    double bounds[6];
+    data->GetBounds(bounds); // xmin, xmax, ymin, ymax, zmin, zmax
+
+    std::vector<double> center(3);
+    center[0] = 0.5 * (bounds[0] + bounds[1]);
+    center[1] = 0.5 * (bounds[2] + bounds[3]);
+    center[2] = 0.5 * (bounds[4] + bounds[5]);
+
+    return center;
+}
+
+
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
+vtkImplicitFunction* GetFuntionPlane(std::vector<double> Orig, std::vector<double> Normal)
+{
+  vtkPlane *plane = vtkPlane::New();
+  plane->SetOrigin(&Orig[0]);
+  plane->SetNormal(&Normal[0]);
+  return plane;
+}
+
+
+vtkDataObject* Cutter(vtkDataObject* Obj, vtkImplicitFunction* function)
+{
+  vtkCutter *cutter = vtkCutter::New();
+  cutter->SetCutFunction( function );
+  cutter->SetInputData( Obj );
+  cutter->Update();
+  return cutter->GetOutputDataObject(0);
+}
+
+
+vtkDataObject* CutterPlane(
+                            vtkDataObject *obj, 
+                            std::vector<double> orig, 
+                            std::vector<double> normal
+                          )
+{
+  vtkImplicitFunction* plane = GetFuntionPlane(orig, normal); 
+  vtkDataObject *cutter = Cutter(obj, plane); 
+  assert(cutter);
+  return cutter;
+}
+
+
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
+vtkDataObject* GetContour(vtkDataObject *input, std::string key, double threshold)
+{
+//vtkSmartPointer<vtkContourFilter> contourFilter = vtkSmartPointer<vtkContourFilter>::New(); // SEGMENTATION!!
+  vtkContourFilter* contourFilter = vtkContourFilter::New();
+  contourFilter->SetInputData( input );
+  contourFilter->SetValue(0,threshold);  // IsoSurface(0) = threshold
+  contourFilter->SetInputArrayToProcess(0, 0, 0, 0, key.c_str() );
+
+  contourFilter->GenerateTrianglesOn();
+  contourFilter->ComputeScalarsOff();
+  contourFilter->ComputeNormalsOff();
+  contourFilter->Update();
+
+  return contourFilter->GetOutputDataObject(0);
+/*
+  vtkDataObject *output = contourFilter->GetOutputDataObject(0); assert( output->IsA("vtkPolyData") );
+  vtkPolyData   *poly   = vtkPolyData::SafeDownCast(output); assert(poly);
+
+  poly->GetCellData()->RemoveArray("vtkOriginalCellIds");
+  poly->GetFieldData()->RemoveArray("__CatalystChannel__");
+  std::cout<<" GetNumberOfPoints "<< poly->GetNumberOfPoints() <<" \n";
+ 
+  return poly;
+*/
+}
+
+//--------------------------------------------------------------------------||--//
+void PWriterSerial(vtkDataObject* Obj, const std::string& name) 
+{
+  std::cout << "[PWriterSerial] ...\n";
+
+  assert(!Obj->IsA("vtkMultiBlockDataSet"));
+
+  vtkXMLWriter* writer = nullptr;
+  if (Obj->IsA("vtkPolyData")) writer = vtkXMLPolyDataWriter::New();
+  else 
+  if (Obj->IsA("vtkImageData")) writer = vtkXMLImageDataWriter::New();
+  else 
+  if (Obj->IsA("vtkUnstructuredGrid")) writer = vtkXMLUnstructuredGridWriter::New();
+
+  if (writer) 
+    std::cout << "[PWriterSerial] Saving '" << Obj->GetClassName() <<"' ...\n";
+  else 
+    std::cout << "[PWriterSerial] Unknown VTK data type: " << Obj->GetClassName() << std::endl;
+
+  assert(writer);
+
+  writer->SetDataModeToBinary();
+  writer->SetInputData( Obj );
+
+  std::ostringstream oss;
+  oss << name << "." << writer->GetDefaultFileExtension();
+  //std::cout << "\t [PWriterSerial] Saving '"<< oss.str() <<"' ... \n";  
+  
+  writer->SetFileName(oss.str().c_str());
+  writer->Write();
+
+  std::cout << "[PWriterSerial] '" << writer->GetFileName() << "' Saved!!\n";
+  writer->Delete();
+}
+
+
+
+//--------------------------------------------------------------------------||--//
+vtkImageData* ReadVTIFile(const std::string& path)
+{
+    //auto reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
+    vtkXMLImageDataReader *reader = vtkXMLImageDataReader::New(); 
+    reader->SetFileName(path.c_str());
+    reader->Update();
+
+    vtkImageData* image = reader->GetOutput();
+    std::cout << "GetNumberOfScalarComponents: " << image->GetNumberOfScalarComponents() << std::endl;
+
+    double range[2];
+    image->GetScalarRange(range);
+    std::cout << "Scalar Range: [" << range[0] << ", " << range[1] << "]" << std::endl;
+
+    int dims[3];
+    image->GetDimensions(dims);
+    std::cout << "Dimensions: [" << dims[0] << ", " << dims[1] << ", " << dims[2] << "]" << std::endl;
+
+    return image;
+}
+
+
+
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
+std::vector<std::string> GetArrayNames(vtkPointData* pointData)
+{
+    std::vector<std::string> names;
+    int numArrays = pointData->GetNumberOfArrays();
+
+    for (int i = 0; i < numArrays; ++i) {
+        const char* name = pointData->GetArrayName(i);
+        if (name) {
+            names.emplace_back(name);
+        }
+    }
+
+    return names;
+}
+
+
+template <typename T>
+bool Contains(const std::vector<T>& vec, const T& value)
+{
+    return std::find(vec.begin(), vec.end(), value) != vec.end();
+}
+
+
+vtkDataArray* GetPointDataArray(vtkPointData* pointData, const std::string& key) 
+{
+    vtkDataArray* array = pointData->GetArray(key.c_str());
+
+    if (!array) {
+        std::cerr << "[GetPointDataArray] '" << key << "' not found!\n[GetPointDataArray] Available arrays:\n";
+        for (int i = 0; i < pointData->GetNumberOfArrays(); ++i) {
+            const char* name = pointData->GetArrayName(i);
+            std::cerr << "\t'" << (name ? name : "(unnamed)") << "'\n";
+        }
+        exit(1);
+    }
+
+    return array;
+}
+
+//--------------------------------------------------------------------------||--//
+void PrintPointDataArrays(vtkPointData* pointData) 
+{
+  int numArrays = pointData->GetNumberOfArrays();
+
+  std::cout << "[PrintPointDataArrays] Found " << numArrays << " array(s):\n";
+  for (int i = 0; i < numArrays; ++i) 
+  {
+      const char* name = pointData->GetArrayName(i);
+      std::cout << "\t Array: '" << (name ? name : "(unnamed)") << "' \n";
+
+      vtkDataArray* array = GetPointDataArray(pointData, name); 
+
+      int nrows = array->GetNumberOfTuples(); 
+      int ncols = array->GetNumberOfComponents();
+      std::cout << "\t nrows: " << nrows <<" ndims:"<< ncols << "\n";
+
+      std::vector<double> range(2);
+      array->GetRange(range.data()); 
+      std::cout << "\t range: (" << range[0] <<", "<< range[1] <<") \n";
+
+      auto size = array->GetActualMemorySize(); 
+      //std::cout << "\t size: " << size << "\n";
+
+      for(int i=0; i< ncols; i++) // Tuples
+      {
+          std::vector<double> rows; 
+          for(int j=0; j< nrows; j++) // Components
+          {
+              auto value = array->GetComponent(i,j); 
+              rows.push_back(value); 
+          }
+          std::cout << "\t  idom: " << i <<" nrow: "<< rows.size() << "\n";
+      }
+
+      //ExtractArray(array);
+  }
+}
+
+
+
+//--------------------------------------------------------------------------||--//
+
+
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
@@ -44,7 +312,7 @@ void PrintDataObjectName(vtkDataObject *vtkDataObject)
   std::cout<<" GetClassName:'"<< vtkDataObject->GetClassName() <<"' "<<std::endl;
 }
 
-vtkDataObject*  ExtractBlock( vtkCompositeDataSet *composite ) 
+vtkDataObject* ExtractBlock( vtkCompositeDataSet *composite ) 
 {
   //vtkCompositeDataSet *composite = reader->GetOutput();
   vtkCompositeDataIterator* iter = composite->NewIterator();
@@ -54,113 +322,88 @@ vtkDataObject*  ExtractBlock( vtkCompositeDataSet *composite )
 //--------------------------------------------------------------------------||--//
 //----------------------------------------|  FROM : E04_BOOST/nek5k01_01.cxx |--//
 std::vector<double>
-GetCppArray(vtkDataArray *vtk_array, int* rows=NULL, int* cols=NULL)
+GetCppArray(vtkDataArray *vtk_array, int* rows=NULL, int* cols=NULL, std::string order="F")
 {
-  assert(vtk_array);
+  //assert(vtk_array);
+  std::vector<double> cpp_array;  
 
-  int nDims = vtk_array->GetNumberOfComponents(); //assert(nDims==1); 
-  int nRows = vtk_array->GetNumberOfTuples();
+  if(vtk_array) 
+  { 
+    int nDims = vtk_array->GetNumberOfComponents(); //assert(nDims==1); 
+    int nRows = vtk_array->GetNumberOfTuples();
 
-  if(cols) cols[0] = nDims;
-  if(rows) rows[0] = nRows;
+    if(cols) cols[0] = nDims;
+    if(rows) rows[0] = nRows;
 
-  std::vector<double> cpp_array(nRows * nDims,0.0);
+  //std::vector<double> cpp_array(nRows * nDims,0.0);
+    cpp_array = std::vector<double>(nRows * nDims, 0.0);   
 
-  /*  C++ Order 
-  |--- nDims ---| _ _
-  a1  b1 ... y1 z1  |  
-  a2  b2 ... y2 z2  |  
-  ...              nRows  ==>> [a1 b1 ... y1 z1 ... an bn ... yn zn]    
-  an  bn ... yn zn _|_         |---------  nDims * nRows ----------|
-  */
-  if(0)
-  for(int i=0,k=0; i<nRows; i++)
-    for(int j=0; j<nDims; j++) cpp_array[k++] = vtk_array->GetComponent(i,j);
+    /*  C++ Order 
+    |--- nDims ---| _ _
+    a1  b1 ... y1 z1  |  
+    a2  b2 ... y2 z2  |  
+    ...              nRows  ==>> [a1 b1 ... y1 z1 ... an bn ... yn zn]    
+    an  bn ... yn zn _|_         |---------  nDims * nRows ----------|
+    */
+//    if(0)
+    if(order == "C")
+    for(int i=0,k=0; i<nRows; i++)
+      for(int j=0; j<nDims; j++) cpp_array[k++] = vtk_array->GetComponent(i,j);
 
-  /* Fotran order 
-  |--- nDims ---| _ _
-  a1  b1 ... y1 z1  |  
-  a2  b2 ... y2 z2  |  
-  ...              nRows  ==>> [a1 a2 ... an ...       z1 z2 ... zn]    
-  a1n bn ... yn zn _|_         |---------  nDims * nRows ----------|
-  */
-  if(1)
-  for(int j=0,k=0; j<nDims; j++)
-    for(int i=0; i<nRows; i++) cpp_array[k++] = vtk_array->GetComponent(i,j);
+    /* Fotran order 
+    |--- nDims ---| _ _
+    a1  b1 ... y1 z1  |  
+    a2  b2 ... y2 z2  |  
+    ...              nRows  ==>> [a1 a2 ... an ...       z1 z2 ... zn]    
+    a1n bn ... yn zn _|_         |---------  nDims * nRows ----------|
+    */
+//    if(1)
+    if(order == "F")
+    for(int j=0,k=0; j<nDims; j++)
+      for(int i=0; i<nRows; i++) cpp_array[k++] = vtk_array->GetComponent(i,j);
+  }
 
   return cpp_array;
 }
 
+
 //--------------------------------------------------------------------------||--//
-//--------------------------------------------------------------------------||--//
-void PWriter1(vtkAlgorithmOutput *GetOutputPort, std::string name, std::string type)
+std::vector<double> GetPointsArray(vtkDataObject *Obj, int print=1)
 {
-/*
-  std::string fname;
-  vtkXMLPDataWriter *parallel_writer = NULL;
+  // 
+  // points  = [x1,y1,z1, x2,y2,z2, ..., xN,yN,zN]  
+  //
+  vtkPoints *points = NULL;
+  if( Obj->IsA("vtkPolyData")         ) points = vtkPolyData::SafeDownCast(Obj)->GetPoints();
+  if( Obj->IsA("vtkStructuredGrid")   ) points = vtkStructuredGrid::SafeDownCast(Obj)->GetPoints();  
+  if( Obj->IsA("vtkUnstructuredGrid") ) points = vtkUnstructuredGrid::SafeDownCast(Obj)->GetPoints(); 
+  assert(points); 
 
-  if( type == "vtkUnstructuredGrid")
+  int nPts=0, nCols=0;
+  std::vector<double> array(0);
+  if(points)
   {
-    parallel_writer = vtkXMLPUnstructuredGridWriter::New();
-    fname = name + ".pvtu";
+    vtkDataArray *dataArray = points->GetData(); assert(dataArray);
+    array = GetCppArray(dataArray, &nPts, &nCols, "C");
   }
-  if( type == "vtkPolyData")
+
+  if(print)
   {
-    parallel_writer = vtkXMLPPolyDataWriter::New();
-    fname = name + ".pvtp";
-  }
+    for(int i=0,k=0; i<nPts; i++)
+    {
+      std::cout<<" "<< i <<" ["; 
+      for(int j=0; j<nCols; j++, k++) std::cout<<" "<< array[k] ; 
+      std::cout<<" ] \n"; 
+    } 
+  } 
 
-  vtkMPIController *contr = vtkMPIController::New(); 
-  //contr->Initialize(); //&argc, &argv, 1);
-  contr->Initialize(NULL, NULL, 1); // initializedExternally == 1;
-  int nranks = contr->GetNumberOfProcesses();
-  int rank   = contr->GetLocalProcessId();
-
-  if(!rank)  
-  std::cout
-  <<"\t'"<< fname <<"' " 
-  <<"rank:"<< rank 
-  <<"/"<< nranks
-  <<"\n";
-
-  // Create the parallel writer and call some functions
-//auto parallel_writer = vtkSmartPointer<vtkXMLPUnstructuredGridWriter>::New();
-  //if( GetOutputPort->IsA("vtkUnstructuredGrid") ) parallel_writer = vtkXMLPUnstructuredGridWriter::New(); 
-  //if( GetOutputPort->IsA("vtkPolyData") )    parallel_writer = vtkXMLPPolyDataWriter::New();   
-  assert(parallel_writer); 
-  parallel_writer->SetInputConnection( GetOutputPort );
-  parallel_writer->SetController(contr);
-  parallel_writer->SetFileName( fname.c_str() );
-  parallel_writer->SetNumberOfPieces(nranks);
-  parallel_writer->SetStartPiece(rank);
-  parallel_writer->SetEndPiece(rank);
-  parallel_writer->SetDataModeToBinary();
-  parallel_writer->Update();
-  parallel_writer->Write();
-
-  contr->Finalize(1);
-*/
-
-/*
-  SEE : 
-    CxxVTKPipelineExample/vtkCPVTKPipeline.cxx  
-
-  // If process 0 doesn't have any points or cells, the writer may
-  // have problems in parallel so we use completeArrays to fill in
-  // the missing information.
-  vtkNew<vtkCompleteArrays> completeArrays;
-  completeArrays->SetInputConnection(threshold->GetOutputPort());
-
-  vtkNew<vtkXMLPUnstructuredGridWriter> writer;
-  writer->SetInputConnection(completeArrays->GetOutputPort());
-  std::ostringstream o;
-  o << dataDescription->GetTimeStep();
-  std::string name = this->FileName + o.str() + ".pvtu";
-  writer->SetFileName(name.c_str());
-  writer->Update();
-*/
-
+//std::cout<<"[GetPointsArray] nPts:"<< nPts <<" \n";
+  return array;
 }
+
+
+
+//--------------------------------------------------------------------------||--//
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
@@ -309,9 +552,15 @@ exit(0);
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
+
+
+
+
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
+/*
 void GetVtkDataObjectMaxMin(vtkDataObject *dataObject)
 {
-/*
   vtkMPIController *contr = vtkMPIController::New();
   contr->Initialize(NULL, NULL, 1); // initializedExternally == 1;
   int nranks = contr->GetNumberOfProcesses();
@@ -351,13 +600,62 @@ void GetVtkDataObjectMaxMin(vtkDataObject *dataObject)
            <<"["<< range[i][0]   
            <<","<< range[i][1] <<"] "
            <<" \n";
-*/
+
 }
+*/
 
+/*
+void PWriter1(vtkAlgorithmOutput *GetOutputPort, std::string name, std::string type)
+{
+  std::string fname;
+  vtkXMLPDataWriter *parallel_writer = NULL;
+
+  if( type == "vtkUnstructuredGrid")
+  {
+    parallel_writer = vtkXMLPUnstructuredGridWriter::New();
+    fname = name + ".pvtu";
+  }
+  if( type == "vtkPolyData")
+  {
+    parallel_writer = vtkXMLPPolyDataWriter::New();
+    fname = name + ".pvtp";
+  }
+
+  vtkMPIController *contr = vtkMPIController::New(); 
+  //contr->Initialize(); //&argc, &argv, 1);
+  contr->Initialize(NULL, NULL, 1); // initializedExternally == 1;
+  int nranks = contr->GetNumberOfProcesses();
+  int rank   = contr->GetLocalProcessId();
+
+  if(!rank)  
+  std::cout
+  <<"\t'"<< fname <<"' " 
+  <<"rank:"<< rank 
+  <<"/"<< nranks
+  <<"\n";
+
+  // Create the parallel writer and call some functions
+//auto parallel_writer = vtkSmartPointer<vtkXMLPUnstructuredGridWriter>::New();
+  //if( GetOutputPort->IsA("vtkUnstructuredGrid") ) parallel_writer = vtkXMLPUnstructuredGridWriter::New(); 
+  //if( GetOutputPort->IsA("vtkPolyData") )    parallel_writer = vtkXMLPPolyDataWriter::New();   
+  assert(parallel_writer); 
+  parallel_writer->SetInputConnection( GetOutputPort );
+  parallel_writer->SetController(contr);
+  parallel_writer->SetFileName( fname.c_str() );
+  parallel_writer->SetNumberOfPieces(nranks);
+  parallel_writer->SetStartPiece(rank);
+  parallel_writer->SetEndPiece(rank);
+  parallel_writer->SetDataModeToBinary();
+  parallel_writer->Update();
+  parallel_writer->Write();
+
+  contr->Finalize(1);
+}
+*/
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
-// #endif // VTK_TOOLS_H
+#endif // VTK_TOOLS_H
 // J. MIGUEL ZAVALA AKE. 2019AUG18. STOCKHOLM, SWEDEN.
 /*
   NOTES :
