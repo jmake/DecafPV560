@@ -31,7 +31,7 @@ include("${PARAVIEW_USE_FILE}")
 
 ##message(STATUS "VTK_INCLUDE_DIRS: ${VTK_INCLUDE_DIRS}") ## several!!
 
-#set(CMAKE_SWIG_FLAGS -namespace SpicyTech) 
+set(CMAKE_SWIG_FLAGS -namespace SpicyTech) # --> %module SpicyTech ## same name!!
 foreach(vtk_lib ${VTK_LIBS})
     get_target_property(vtk_inc ${vtk_lib} INTERFACE_INCLUDE_DIRECTORIES)
     foreach(inc ${vtk_inc})

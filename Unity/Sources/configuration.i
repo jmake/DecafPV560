@@ -1,4 +1,4 @@
-%module ModuleName1
+%module SpicyTech
 
 %{
 #include "SpicyTechDicom.hpp"
