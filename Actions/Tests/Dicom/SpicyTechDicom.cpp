@@ -105,6 +105,13 @@ class VtkGrid
         vtkDataObject *cutter = CutterPlane(obj, orig, normal); 
         //vtkDataObject *cutter2 = Cutter(obj, GetFuntionPlane({2.0,0.0,0.01},{1.0,0.0,0.0}) ); assert(cutter2);
 
+        std::vector<std::vector<double>> coords = GetCoords(cutter);
+        std::cout << "\t [cutter] n_coords : "<< coords.size() <<" \n";
+
+        std::vector<unsigned char> cellTypes;
+        std::vector<std::vector<vtkIdType>> cellVertices;
+        GetCellsList(cutter, cellVertices, cellTypes);  
+
         std::string fname = "cutter"; 
         PWriterSerial(cutter, fname); 
     }
@@ -126,6 +133,13 @@ class VtkGrid
             
             double threshold = (range[0] + range[1]) * 0.5;
             vtkDataObject* contour = GetContour(obj, key, threshold); 
+
+            std::vector<std::vector<double>> coords = GetCoords(contour);
+            std::cout << "\t n_coords["<< key << "] : "<< coords.size() <<" \n";
+
+            std::vector<unsigned char> cellTypes;
+            std::vector<std::vector<vtkIdType>> cellVertices;
+            GetCellsList(contour, cellVertices, cellTypes);  
 
             std::string fname = "contour"; 
             PWriterSerial(contour, fname); 
@@ -150,8 +164,7 @@ class VtkGrid
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
-namespace SpicyTech 
-{
+//namespace SpicyTech {
 
     Dicom::~Dicom()
     {
@@ -194,7 +207,7 @@ namespace SpicyTech
         delete m; 
     }
 
-} // SpicyTech
+//} // SpicyTech
 
 
 //--------------------------------------------------------------------------||--//

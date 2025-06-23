@@ -11,8 +11,8 @@ template <class vtkGridType> class VtkGrid;
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
-namespace SpicyTech 
-{
+//namespace SpicyTech {
+
     class Dicom
     {
         public :
@@ -29,7 +29,7 @@ namespace SpicyTech
             VtkGrid<vtkImageData> *mesh; 
     }; // Dicom
 
-} // namespace
+//} // namespace
 
 
 //#endif // DICOM_TOOLS_H

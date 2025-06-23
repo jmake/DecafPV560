@@ -58,6 +58,113 @@
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
+#include <vtkDataObject.h>
+#include <vtkCellType.h>
+#include <vtkCell.h>
+#include <vtkIdList.h>
+#include <vtkSmartPointer.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkPolyData.h>
+
+#include <vector>
+#include <unordered_map>
+#include <iostream>
+#include <string>
+
+std::string GetCellTypeName(unsigned char type)
+{
+    switch (type)
+    {
+    case VTK_TRIANGLE:    return "VTK_TRIANGLE";
+    case VTK_QUAD:        return "VTK_QUAD";
+    case VTK_TETRA:       return "VTK_TETRA";
+    case VTK_PYRAMID:     return "VTK_PYRAMID";
+    case VTK_WEDGE:       return "VTK_WEDGE";
+    case VTK_HEXAHEDRON:  return "VTK_HEXAHEDRON";
+    case VTK_POLYHEDRON:  return "VTK_POLYHEDRON";
+    case VTK_VOXEL:       return "VTK_VOXEL";
+    default:              return "???";
+    }
+}
+
+void GetCellsList(vtkDataObject* obj,
+                  std::vector<std::vector<vtkIdType>>& cellVertices,
+                  std::vector<unsigned char>& cellTypes)
+{
+    vtkUnstructuredGrid* ugrid = vtkUnstructuredGrid::SafeDownCast(obj);
+    vtkPolyData* poly = vtkPolyData::SafeDownCast(obj);
+
+    if (!ugrid && !poly)
+    {
+        std::cout << "[GetCellsList] Unsupported vtkDataObject type.\n";
+        return;
+    }
+
+    vtkIdType nCells = ugrid ? ugrid->GetNumberOfCells() : poly->GetNumberOfCells();
+
+    std::unordered_map<unsigned char, int> typeCount;
+
+    for (vtkIdType i = 0; i < nCells; ++i)
+    {
+        vtkSmartPointer<vtkIdList> ids = vtkSmartPointer<vtkIdList>::New();
+        if (ugrid)
+            ugrid->GetCellPoints(i, ids);
+        else
+            poly->GetCellPoints(i, ids);
+
+        std::vector<vtkIdType> cell(ids->GetNumberOfIds());
+        for (vtkIdType j = 0; j < ids->GetNumberOfIds(); ++j)
+            cell[j] = ids->GetId(j);
+
+        cellVertices.push_back(cell);
+
+        unsigned char cellType = ugrid ? ugrid->GetCellType(i) : poly->GetCellType(i);
+        cellTypes.push_back(cellType);
+
+        typeCount[cellType]++;
+    }
+
+    std::cout << "[GetCellsList] Found Types: ";
+    for (std::unordered_map<unsigned char, int>::const_iterator it = typeCount.begin(); it != typeCount.end(); ++it)
+    {
+        std::cout << GetCellTypeName(it->first) << " " << it->second  <<" ";
+    }
+    std::cout << std::endl;
+}
+
+
+
+
+
+//--------------------------------------------------------------------------||--//
+#include <vtkPointSet.h>
+#include <vtkDataObject.h>
+#include <vtkDataArray.h>
+#include <vector>
+
+std::vector<std::vector<double>> GetCoords(vtkDataObject* obj)
+{
+    vtkPointSet* pointSet = vtkPointSet::SafeDownCast(obj);
+    if (!pointSet) return {};
+
+    vtkDataArray* data = pointSet->GetPoints()->GetData();
+    if (!data) return {};
+
+    vtkIdType numPoints = data->GetNumberOfTuples();
+    int numComponents = data->GetNumberOfComponents();
+
+    std::vector<std::vector<double>> coords(numPoints, std::vector<double>(numComponents));
+
+    for (vtkIdType i = 0; i < numPoints; ++i)
+        data->GetTuple(i, coords[i].data());
+
+    return coords;
+}
+
+
+
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
 void VtkWarning( std::string fname )
 {
   vtkFileOutputWindow *outwin = vtkFileOutputWindow::New();
@@ -246,18 +353,20 @@ bool Contains(const std::vector<T>& vec, const T& value)
 
 vtkDataArray* GetPointDataArray(vtkPointData* pointData, const std::string& key) 
 {
-    vtkDataArray* array = pointData->GetArray(key.c_str());
+  int hasArray = pointData->HasArray(key.c_str());
 
-    if (!array) {
-        std::cerr << "[GetPointDataArray] '" << key << "' not found!\n[GetPointDataArray] Available arrays:\n";
-        for (int i = 0; i < pointData->GetNumberOfArrays(); ++i) {
-            const char* name = pointData->GetArrayName(i);
-            std::cerr << "\t'" << (name ? name : "(unnamed)") << "'\n";
-        }
-        exit(1);
-    }
+  vtkDataArray* array = pointData->GetArray(key.c_str());
 
-    return array;
+  if (!array) {
+      std::cerr << "[GetPointDataArray] '" << key << "' not found!\n[GetPointDataArray] Available arrays:\n";
+      for (int i = 0; i < pointData->GetNumberOfArrays(); ++i) {
+          const char* name = pointData->GetArrayName(i);
+          std::cerr << "\t'" << (name ? name : "(unnamed)") << "'\n";
+      }
+      exit(1);
+  }
+
+  return array;
 }
 
 //--------------------------------------------------------------------------||--//
@@ -302,7 +411,10 @@ void PrintPointDataArrays(vtkPointData* pointData)
 
 
 //--------------------------------------------------------------------------||--//
-
+void PrintSelf(vtkDataObject *vtkDataObject)
+{
+  vtkDataObject->PrintSelf(std::cout,vtkIndent(2));
+}
 
 
 //--------------------------------------------------------------------------||--//
@@ -311,6 +423,7 @@ void PrintDataObjectName(vtkDataObject *vtkDataObject)
 {
   std::cout<<" GetClassName:'"<< vtkDataObject->GetClassName() <<"' "<<std::endl;
 }
+
 
 vtkDataObject* ExtractBlock( vtkCompositeDataSet *composite ) 
 {
