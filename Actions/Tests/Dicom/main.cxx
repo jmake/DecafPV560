@@ -14,11 +14,18 @@ int main(int argc, char* argv[])
     std::string directory; 
     //directory = "F:/z2025_1/Dicom/DicomTestImages4/series-000001"; // :( 
     // nrows: 1310720 ndims:1, range: (0, 1059) 
-    directory = "F:\\z2025_1\\Dicom\\DicomTestImages1\\matlab\\examples\\sample_data\\DICOM\\digest_article"; 
 
     auto* dicom = new SpicyTech::Dicom();
-    dicom->LoadFile( directory ); 
-    //dicom->TestVti("F:\\z2025_1\\Dicom\\DecafPV560\\headsq.vti"); 
+
+    directory = "F:\\z2025_1\\Dicom\\DicomTestImages1\\matlab\\examples\\sample_data\\DICOM\\digest_article"; 
+    //dicom->LoadDicom( directory ); 
+
+    directory = "F:\\z2025_1\\Dicom\\NII\\LAYNII-master\\test_data\\sc_layers_3dcolumns.nii.gz"; 
+    directory = "F:\\z2025_1\\Dicom\\NII\\BRATS_001.nii.gz";
+    dicom->LoadNifti( directory ); 
+
+    directory = "F:\\z2025_1\\Dicom\\NII\\1.2.826.0.1.3680043.10633.nii"; 
+    dicom->LoadNifti( directory ); 
     
     delete dicom;
 
@@ -27,4 +34,8 @@ int main(int argc, char* argv[])
 }
 /*
     F:\z2025_1\ParaView600\bin\paraview.exe .\Actions\Tests\Dicom\test2.vti
+
+SEE : 
+    https://theaisummer.com/medical-image-python/
+
 */

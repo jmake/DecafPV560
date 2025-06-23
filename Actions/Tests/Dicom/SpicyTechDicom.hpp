@@ -8,8 +8,7 @@
 
 template <class vtkGridType> class VtkGrid; 
 
-
-void Something(); 
+int NiftiReader(std::string fin_1); 
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
@@ -22,7 +21,8 @@ namespace SpicyTech {
              Dicom(); 
 
             void TestVti(std::string directory); 
-            void LoadFile(std::string directory); 
+            void LoadNifti(std::string directory); 
+            void LoadDicom(std::string directory); 
 
             void CutCreate(); 
 

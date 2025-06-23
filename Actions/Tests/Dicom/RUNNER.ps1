@@ -25,6 +25,25 @@ function CL_SETUP
   ninja.exe --version 
 }
 
+<#---------------------------------------------------------------------------------------------#>
+function Verify-FileHash 
+{
+  ## Get-FileHash  -Algorithm SHA256 -Path .\Actions\Tests\Dicom\nifti.vti 
+  param (
+      [Parameter(Mandatory = $true)][string]$FilePath, 
+      [Parameter(Mandatory = $true)][string]$ExpectedHash
+  )
+
+  $actualHash = (Get-FileHash -Path $FilePath -Algorithm SHA256).Hash
+  if ($actualHash -ne $ExpectedHash) {
+      Write-Host "[RUNNER] '${FilePath}' fails!!"
+      Set-Location -Path ${EXECUTION_PATH}
+      exit 1
+  } else {
+      Write-Host "[RUNNER] '${FilePath}' verified!!"
+  }
+}
+
 
 <#---------------------------------------------------------------------------------------------#>
 <#---------------------------------------------------------------------------------------------#>
@@ -43,18 +62,29 @@ function COMPILATION
   ##Set-Location -Path ${FolderName} 
   ##Get-ChildItem
 
+  $ZLIB_ROOT="F:/z2025_1/Dicom/zlib/Execs"
+
   cmake.exe -S . `
   -G "Ninja" `
   -B  $CompilationPath `
   -DCMAKE_INSTALL_PREFIX="$ExecutablePath" `
-  -DParaView_DIR="$PV_DIR"
+  -DParaView_DIR="$PV_DIR" `
+  -DZLIB_ROOT="$ZLIB_ROOT"
+
 
   cmake.exe --build  $CompilationPath --config Release 
+#Set-Location -Path ${EXECUTION_PATH}; exit  
 
-  cmake.exe --build  $CompilationPath --target test --config Release
+  ##cmake.exe --build  $CompilationPath --target test --config Release
 
   cmake.exe --install  $CompilationPath --config Release
+
   & ".\${ExecutablePath}\bin\SpicyTech.exe"
+
+  ## Get-FileHash -Algorithm SHA256 -Path .\Actions\Tests\Dicom\nifti.vti 
+  Verify-FileHash `
+  -FilePath "nifti.vti" `
+  -ExpectedHash "5A3C264E13B887F16B69DFF91495136BB37C3CB05A7020A3B8EA5C9E7BAA7191" 
 
   Set-Location -Path ${EXECUTION_PATH} 
 } 
