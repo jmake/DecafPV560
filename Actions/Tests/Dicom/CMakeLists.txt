@@ -21,7 +21,7 @@ FILE(GLOB SRCs *.cpp)
 set(exec01 SpicyTech)  
 
 ##add_executable(${exec01} main.cpp)  
-add_executable(${exec01} ${SRCs})  
+add_executable(${exec01} ${SRCs} main.cxx)  
 
 set_property(TARGET ${exec01} PROPERTY LINKER_LANGUAGE CXX)
 target_link_libraries(${exec01} ${LIBS})   
