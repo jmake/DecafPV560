@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /w")
 ##set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4101")
 
 
-## ZLIB 
+## ZLIB ###############################################################################
 message(STATUS "  [ZLIB_ROOT]:'${ZLIB_ROOT}'")
 
 cmake_policy(SET CMP0074 NEW)
@@ -28,7 +28,7 @@ include_directories(${ZLIB_INCLUDE_DIRS})
 add_definitions(-DHAVE_ZLIB)
 
 
-## VTK   
+## Paraview ###############################################################################
 message(STATUS "  [ParaView_DIR]:'${ParaView_DIR}'")
 
 list(APPEND LIBS vtkPVCatalyst vtkPVVTKExtensionsDefault vtkPVClientServerCoreCore)

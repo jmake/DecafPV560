@@ -103,28 +103,11 @@ void IterateNiftiData(nifti_image* nii1)
     }
 
     std::cout << "[IterateNiftiData] "<< nr_voxels <<"  \n";
-/*    
-    int nx = nii->nx, ny = nii->ny, nz = nii->nz, nt = nii->nt;
-    int nvox = nii->nvox;
-
-    int idx = -1 ;
-    float* data = static_cast<float*>(nii->data);
-    for (int t = 0; t < nt; ++t)
-        for (int z = 0; z < nz; ++z)
-            for (int y = 0; y < ny; ++y)
-                for (int x = 0; x < nx; ++x) 
-                {
-                    idx = x + nx * (y + ny * (z + nz * t));
-                    float val = data[idx];
-//std::cout << idx <<" /  "<< z <<" "<< y <<" "<< x <<" "<< nvox << " "<< val <<" \n";
-
-                }
-*/
 }
 
 
 //--------------------------------------------------------------------------||--//
-int NiftiReader(std::string fin_1) 
+void NiftiReader(std::string fin_1) 
 {
     /*
         - HAVE_ZLIB ->  zlib.h, zd.lib 
@@ -135,7 +118,7 @@ int NiftiReader(std::string fin_1)
     nifti_image* nii = nifti_image_read(fin_1.c_str(), 1);
     if (!nii) {
         fprintf(stderr, "[NiftiReader] ** failed to read NIfTI from '%s'\n", fin_1.c_str());
-        return 2;
+        //return 2;
     }
 
     log_nifti_descriptives(nii); 
@@ -143,10 +126,7 @@ int NiftiReader(std::string fin_1)
     //nii->data[i]; 
     IterateNiftiData(nii); 
     SaveVTIFromNifti(nii); 
-
-    //log_nifti_descriptives(nii); 
-
-    return 1; 
+    //return 1; 
 }
 
 

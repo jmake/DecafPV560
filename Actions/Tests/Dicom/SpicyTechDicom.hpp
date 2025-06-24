@@ -8,7 +8,7 @@
 
 template <class vtkGridType> class VtkGrid; 
 
-int NiftiReader(std::string fin_1); 
+//int NiftiReader(std::string fin_1); 
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
