@@ -145,6 +145,7 @@ void VersionShow()
     std::cout << "[SpicyTech] VTK version: " << vtkVersion::GetVTKVersion() << std::endl;
 }
 
+
 //--------------------------------------------------------------------------||--//
 vtkSmartPointer<vtkImageData> 
 ReadDICOMSeries(const std::string& path) 
@@ -165,17 +166,210 @@ ReadDICOMSeries(const std::string& path)
 
 
 //--------------------------------------------------------------------------||--//
+void _Cutter(
+                    vtkDataObject *obj, 
+                    std::vector<double> orig, 
+                    std::vector<double> normal, 
+                    std::string key
+                 ) 
+{
+    // C# : 
+    //      int[] triangles
+    //  Vector3[] meshVertices = new Vector3[nbVertices];
+    //
+    //   indices -> [ v11,v12,...,v1M, v21,v22,....v2M, ..., vN1,vN2,...,vNM ];
+    // triangles -> [ v11,v12,v13, v21,v22,v23, ..., vN1,vN2,vN3 ]; 
+    //  vertices -> { {x1,y1,z1}, {x2,y2,z2}, ..., {xM,yM,zM} };
+    // 
+    normal = {1.0, 0.0, 0.0}; 
+    orig = GetGeometricCenter(obj); 
+
+    vtkDataObject *cutter = CutterPlane(obj, orig, normal); 
+    vtkPolyData* vtp = static_cast<vtkPolyData*>(cutter);
+
+    int n_rows = -1; 
+    int n_cols = -1; 
+    std::vector<float> vertices = GetCppArray<float>( vtp->GetPoints()->GetData(), &n_rows, &n_cols); 
+
+    int n_indices = -1; 
+    std::vector<int> indices = GetFlatCellIndices( vtp, n_indices );
+
+
+    vtkPointData* pointData = vtp->GetPointData(); 
+    std::vector<std::string> names = GetArrayNames(pointData); 
+
+    //std::string key; 
+    if( Contains(names, key) )
+    {
+        vtkDataArray* array = GetPointDataArray(pointData, key);  
+        std::vector<float> vertices = GetCppArray<float>(array, &n_rows, &n_cols); 
+    }
+
+}
+
+
+class Slicer  
+{
+    public :
+    ~Slicer()
+    {
+        if(vtp) 
+        {
+            vtp->Delete();
+            vtp = nullptr; 
+        } 
+
+        if(vti) 
+        {
+            vti->Delete();
+            vti = nullptr; 
+        } 
+        
+        indices.clear(); 
+        property.clear(); 
+        vertices.clear(); 
+    }
+
+
+    Slicer()
+    {
+        vti = nullptr; 
+        vtp = nullptr; 
+        array = nullptr; 
+
+        indices = {}; 
+        property = {}; 
+        vertices = {}; 
+    }
+
+
+    void Create(vtkDataObject *obj, std::string prop)
+    {
+        vti = static_cast<vtkImageData*>(obj);        
+        key = prop; 
+
+        //std::vector<double> r0 = GetGeometricCenter(obj); 
+        //std::vector<double> n0 = {1.0, 0.0, 0.0}; 
+
+        orig = GetGeometricCenter(obj); 
+        __Update__({1.0,0.0,0.0}, orig);
+    }
+
+
+    void Update(std::vector<double> n0)
+    {
+        __Update__(n0, orig);
+    } 
+
+    
+    void __Update__(
+            std::vector<double> normal, 
+            std::vector<double> orig 
+        )
+    {
+        //orig = r0; 
+        //normal = n0; 
+
+        vtkDataObject *cutter = CutterPlane(vti, orig, normal); 
+        vtp = static_cast<vtkPolyData*>(cutter);
+
+        vtkPointData* pointData = vtp->GetPointData(); 
+
+        std::vector<std::string> names;  
+        names = GetArrayNames(pointData); 
+
+        if( Contains(names, key) )
+        {
+            array = GetPointDataArray(pointData, key);  
+        }
+
+        DataGet(); 
+        GeometryGet(); 
+    }
+
+
+    void DataGet()
+    {
+        if( vtp && array )
+        {
+            int n_rows = -1; 
+            int n_cols = -1; 
+
+            property = GetCppArray<float>(array, &n_rows, &n_cols); 
+            std::cout << "\t [Slicer] key:'"<< array->GetName() <<"' n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";        
+        }
+    }
+
+
+    void GeometryGet()
+    {
+        // C# : 
+        //      int[] triangles
+        //  Vector3[] meshVertices = new Vector3[nbVertices];
+        //
+        //   indices -> [ v11,v12,...,v1M, v21,v22,....v2M, ..., vN1,vN2,...,vNM ];
+        // triangles -> [ v11,v12,v13, v21,v22,v23, ..., vN1,vN2,vN3 ]; 
+        //  vertices -> { {x1,y1,z1}, {x2,y2,z2}, ..., {xM,yM,zM} };
+        // 
+        if( vtp && array )
+        {
+            int n_rows = -1; 
+            int n_cols = -1; 
+            vertices = GetCppArray<float>( vtp->GetPoints()->GetData(), &n_rows, &n_cols); 
+            std::cout << "\t [Slicer] n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";
+
+            int n_indices = -1; 
+            indices = GetFlatCellIndices( vtp, n_indices );
+            std::cout << "\t [Slicer] n_indices : "<< n_indices <<" \n";
+        }
+
+    }    
+
+
+    void Save(std::string fname)
+    {
+        if( vtp && array )
+        {
+            PWriterSerial(vtp, fname); 
+        }        
+    }
+
+
+    private : 
+    std::string key;  
+    std::vector<double> orig;  
+    //std::vector<double> normal;  
+
+    vtkPolyData* vtp; 
+    vtkImageData* vti; 
+    vtkDataArray* array; 
+
+    std::vector<int> indices; 
+    std::vector<float> property; 
+    std::vector<float> vertices; 
+}; 
 
 
 //--------------------------------------------------------------------------||--//
-
 template <class vtkGridType> 
 class VtkGrid   
 {
     public :
     ~VtkGrid()
-    {        
+    {
+        if(obj)
+        {
+            obj->Delete(); 
+            obj = nullptr; 
+        } 
+
+        if(slicer)
+        {
+            delete slicer; 
+            slicer = nullptr; 
+        }
     }
+
 
     VtkGrid()
     {
@@ -184,6 +378,7 @@ class VtkGrid
         this->nPts    = -1 ;  
         this->obj     = nullptr;
 
+        this->slicer = new Slicer(); 
         //Warning("vtk.log"); 
     }
 
@@ -216,27 +411,47 @@ class VtkGrid
     }
 
 
+    void CutterCreate(std::string key) //, std::vector<double> orig, std::vector<double> normal) 
+    {
+        slicer->Create(obj, key); 
+    } 
+
+
+    void CutterSave(std::string fname)
+    {
+        slicer->Save(fname); 
+    }
+
+
+    void CutterUpdate(float x, float y, float z, float nx, float ny, float nz)
+    {
+        std::vector<double> n0 = {nx, ny, nz}; 
+        //std::vector<double> r0 = {x, y, z};
+
+        slicer->Update(n0); 
+    }
+
+/*
     void PlaneGet() 
     {
-        
         std::vector<double> normal = {1.0, 0.0, 0.0}; 
 
         std::vector<double> orig = GetGeometricCenter(obj); 
         PrintVector(orig); 
 
         vtkDataObject *cutter = CutterPlane(obj, orig, normal); 
-/*
+
         std::vector<std::vector<double>> coords = GetCoords(cutter);
         std::cout << "\t [cutter] n_coords : "<< coords.size() <<" \n";
 
         std::vector<unsigned char> cellTypes;
         std::vector<std::vector<vtkIdType>> cellVertices;
         GetCellsList(cutter, cellVertices, cellTypes);  
-*/
+
         std::string fname = "cutter"; 
         PWriterSerial(cutter, fname); 
     }
-
+*/
 
     void SurfaceGet()
     {
@@ -277,6 +492,7 @@ class VtkGrid
         int nPts ;
         int nArrays; 
 
+        Slicer* slicer; 
         vtkGridType* obj; 
 
 }; // VtkGrid
@@ -309,10 +525,24 @@ namespace SpicyTech {
     }
 
 
-    void Nifti::CutCreate() 
+    void Nifti::CutCreate(std::string key) 
     {
         if(!manager) return; 
-        manager->PlaneGet(); 
+        manager->CutterCreate(key); 
+    }
+
+
+    void Nifti::CutSave(std::string fname) 
+    {
+        if(!manager) return; 
+        manager->CutterSave(fname); 
+    }
+
+
+    void Nifti::CutUpdate(float x, float y, float z, float nx, float ny, float nz)
+    {
+        if(!manager) return; 
+        manager->CutterUpdate(x,y,z, nx,ny,nz); 
     }
 
 
@@ -344,7 +574,7 @@ namespace SpicyTech {
         mesh->MeshSet(vti); 
         mesh->MeshSave("test1"); 
 
-        mesh->PlaneGet(); 
+        //mesh->PlaneGet(); 
         mesh->SurfaceGet(); 
     }
 

@@ -38,7 +38,9 @@ namespace SpicyTech {
              Nifti(); 
 
             void LoadFile(std::string directory); 
-            void CutCreate(); 
+            void CutSave(std::string key); 
+            void CutCreate(std::string key); 
+            void CutUpdate(float x, float y, float z, float nx, float ny, float nz); 
 
         private :
             std::string fname; 

@@ -55,9 +55,6 @@
 #include <vtkDataSet.h>
 #include <vtkBoundingBox.h>
 
-
-//--------------------------------------------------------------------------||--//
-//--------------------------------------------------------------------------||--//
 #include <vtkDataObject.h>
 #include <vtkCellType.h>
 #include <vtkCell.h>
@@ -66,11 +63,34 @@
 #include <vtkUnstructuredGrid.h>
 #include <vtkPolyData.h>
 
+
 #include <vector>
 #include <unordered_map>
 #include <iostream>
 #include <string>
 
+#include <vtkTriangleFilter.h>
+
+#include <vtkPointSet.h>
+#include <vtkDataObject.h>
+#include <vtkDataArray.h>
+#include <vector>
+
+
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
+vtkDataObject* TriangulateGet(vtkDataObject* obj)
+{
+    vtkTriangleFilter* triangleFilter = vtkTriangleFilter::New();
+    triangleFilter->SetInputData(obj);
+    triangleFilter->Update();
+
+    return triangleFilter->GetOutputDataObject(0);
+}
+
+
+
+//--------------------------------------------------------------------------||--//
 std::string GetCellTypeName(unsigned char type)
 {
     switch (type)
@@ -132,16 +152,38 @@ void GetCellsList(vtkDataObject* obj,
     std::cout << std::endl;
 }
 
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
+std::vector<int> GetFlatCellIndices(vtkDataObject* obj, int& nCells)
+{
+    vtkPolyData* poly = vtkPolyData::SafeDownCast(obj);
+    std::vector<int> flatIndices;
 
+    if (!poly)
+    {
+        nCells = 0; 
+        std::cerr << "[GetFlatCellIndices] Error: input is not vtkPolyData.\n";
+        return flatIndices;
+    }
+
+    nCells = poly->GetNumberOfCells();
+    for (vtkIdType i = 0; i < nCells; ++i)
+    {
+        vtkSmartPointer<vtkIdList> ids = vtkSmartPointer<vtkIdList>::New();
+        poly->GetCellPoints(i, ids);
+
+        for (vtkIdType j = 0; j < ids->GetNumberOfIds(); ++j)
+        {
+            flatIndices.push_back(static_cast<int>(ids->GetId(j)));
+        }
+    }
+
+    return flatIndices;
+}
 
 
 
 //--------------------------------------------------------------------------||--//
-#include <vtkPointSet.h>
-#include <vtkDataObject.h>
-#include <vtkDataArray.h>
-#include <vector>
-
 std::vector<std::vector<double>> GetCoords(vtkDataObject* obj)
 {
     vtkPointSet* pointSet = vtkPointSet::SafeDownCast(obj);
@@ -214,7 +256,7 @@ vtkImplicitFunction* GetFuntionPlane(std::vector<double> Orig, std::vector<doubl
 }
 
 
-vtkDataObject* Cutter(vtkDataObject* Obj, vtkImplicitFunction* function)
+vtkDataObject* CutterCreate(vtkDataObject* Obj, vtkImplicitFunction* function)
 {
   vtkCutter *cutter = vtkCutter::New();
   cutter->SetCutFunction( function );
@@ -231,7 +273,7 @@ vtkDataObject* CutterPlane(
                           )
 {
   vtkImplicitFunction* plane = GetFuntionPlane(orig, normal); 
-  vtkDataObject *cutter = Cutter(obj, plane); 
+  vtkDataObject *cutter = CutterCreate(obj, plane); 
   assert(cutter);
   return cutter;
 }
@@ -434,11 +476,12 @@ vtkDataObject* ExtractBlock( vtkCompositeDataSet *composite )
 
 //--------------------------------------------------------------------------||--//
 //----------------------------------------|  FROM : E04_BOOST/nek5k01_01.cxx |--//
-std::vector<double>
-GetCppArray(vtkDataArray *vtk_array, int* rows=NULL, int* cols=NULL, std::string order="F")
+template <typename T>
+std::vector<T>
+GetCppArray(vtkDataArray *vtk_array, int* rows=NULL, int* cols=NULL, std::string order="C")
 {
   //assert(vtk_array);
-  std::vector<double> cpp_array;  
+  std::vector<T> cpp_array;  
 
   if(vtk_array) 
   { 
@@ -449,7 +492,7 @@ GetCppArray(vtkDataArray *vtk_array, int* rows=NULL, int* cols=NULL, std::string
     if(rows) rows[0] = nRows;
 
   //std::vector<double> cpp_array(nRows * nDims,0.0);
-    cpp_array = std::vector<double>(nRows * nDims, 0.0);   
+    cpp_array = std::vector<T>(nRows * nDims, 0.0);   
 
     /*  C++ Order 
     |--- nDims ---| _ _
@@ -458,7 +501,6 @@ GetCppArray(vtkDataArray *vtk_array, int* rows=NULL, int* cols=NULL, std::string
     ...              nRows  ==>> [a1 b1 ... y1 z1 ... an bn ... yn zn]    
     an  bn ... yn zn _|_         |---------  nDims * nRows ----------|
     */
-//    if(0)
     if(order == "C")
     for(int i=0,k=0; i<nRows; i++)
       for(int j=0; j<nDims; j++) cpp_array[k++] = vtk_array->GetComponent(i,j);
@@ -470,7 +512,6 @@ GetCppArray(vtkDataArray *vtk_array, int* rows=NULL, int* cols=NULL, std::string
     ...              nRows  ==>> [a1 a2 ... an ...       z1 z2 ... zn]    
     a1n bn ... yn zn _|_         |---------  nDims * nRows ----------|
     */
-//    if(1)
     if(order == "F")
     for(int j=0,k=0; j<nDims; j++)
       for(int i=0; i<nRows; i++) cpp_array[k++] = vtk_array->GetComponent(i,j);
@@ -497,7 +538,7 @@ std::vector<double> GetPointsArray(vtkDataObject *Obj, int print=1)
   if(points)
   {
     vtkDataArray *dataArray = points->GetData(); assert(dataArray);
-    array = GetCppArray(dataArray, &nPts, &nCols, "C");
+    array = GetCppArray<double>(dataArray, &nPts, &nCols, "C");
   }
 
   if(print)
@@ -529,7 +570,7 @@ class Analysis
   void SetPoints(vtkPoints *points)
   {
     vtkDataArray *dataArray = points->GetData();
-    Arrays["Coords"] = GetCppArray(dataArray, &rows, &cols);
+    Arrays["Coords"] = GetCppArray<double>(dataArray, &rows, &cols);
     ArrayNames.push_back("Coords");
   }
 
@@ -539,7 +580,7 @@ class Analysis
     FindArrayName(key);
 
     vtkDataArray *dataArray = pointData->GetArray(key.c_str());
-    Arrays[key] = GetCppArray(dataArray);
+    Arrays[key] = GetCppArray<double>(dataArray);
   }
 
   void GetArrayNames(vtkPointData *pointData)
