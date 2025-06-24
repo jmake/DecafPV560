@@ -64,8 +64,6 @@ function RunmeTest
   param([string]$Path) 
   Set-Location -Path ${Path}  
 
-  pwd 
-
   $TestPath="runme.exe"
   if (Test-Path  $TestPath){Remove-Item -Recurse -Force  $TestPath}
 
@@ -75,10 +73,17 @@ function RunmeTest
 
   .\runme.exe
   
-  ## Get-FileHash -Algorithm SHA256 -Path .\Actions\Tests\Dicom\nifti.vti 
+  ## Get-FileHash -Algorithm SHA256 -Path .\Unity\Assets\nifti.vti
   Verify-FileHash `
   -FilePath "nifti.vti" `
-  -ExpectedHash "5A3C264E13B887F16B69DFF91495136BB37C3CB05A7020A3B8EA5C9E7BAA7191" 
+  -ExpectedHash "2059CB1D1959D97C647945315288DCF3BF403AB625BE5346D85A947BB921B32D" 
+
+  ## Get-FileHash -Algorithm SHA256 -Path .\Unity\Assets\cutter.vtp
+  Verify-FileHash `
+  -FilePath "cutter.vtp" `
+  -ExpectedHash "AC9FC1B9771A51E5082C67DEF34A0B8674E5FE909F6AC5C595EC48976CE972F3" 
+
+  echo "F:\z2025_1\ParaView600\bin\paraview.exe .\Unity\Assets\nifti.vti"
 
   ##Set-Location -Path ${EXECUTION_PATH}; exit  
 }
