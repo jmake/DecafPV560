@@ -20,16 +20,31 @@ namespace SpicyTech {
             ~Dicom(); 
              Dicom(); 
 
-            void TestVti(std::string directory); 
-            void LoadNifti(std::string directory); 
-            void LoadDicom(std::string directory); 
-
+            void LoadFile(std::string directory); 
             void CutCreate(); 
+            
+            void TestVti(std::string directory); 
 
         private :
             std::string fname; 
             VtkGrid<vtkImageData> *mesh; 
     }; // Dicom
+
+
+    class Nifti
+    {
+        public :
+            ~Nifti(); 
+             Nifti(); 
+
+            void LoadFile(std::string directory); 
+            void CutCreate(); 
+
+        private :
+            std::string fname; 
+            VtkGrid<vtkImageData> *manager; 
+    }; // Nifti
+
 
 } // namespace
 

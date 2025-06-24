@@ -28,7 +28,8 @@
 
 
 //--------------------------------------------------------------------------||--//
-vtkSmartPointer<vtkImageData> SaveVTIFromNifti(nifti_image* nii)
+//vtkSmartPointer<vtkImageData> 
+vtkImageData* SaveVTIFromNifti(nifti_image* nii)
 {
     std::cout << "[SaveVTIFromNifti] ...\n";
 
@@ -46,6 +47,7 @@ vtkSmartPointer<vtkImageData> SaveVTIFromNifti(nifti_image* nii)
     vtkSmartPointer<vtkFloatArray> vtk_data = vtkSmartPointer<vtkFloatArray>::New();
     vtk_data->SetNumberOfComponents(1);
     vtk_data->SetNumberOfTuples(nr_voxels);
+    vtk_data->SetName("voxel");
 
     for (int t = 0; t < nt; ++t)
         for (int z = 0; z < nz; ++z)
@@ -58,7 +60,8 @@ vtkSmartPointer<vtkImageData> SaveVTIFromNifti(nifti_image* nii)
                 }
 
     // Create vtkImageData
-    vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
+    //vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
+    vtkImageData* image = vtkImageData::New(); 
 
     const float dX = nii->pixdim[1];
     const float dY = nii->pixdim[2];
@@ -107,7 +110,8 @@ void IterateNiftiData(nifti_image* nii1)
 
 
 //--------------------------------------------------------------------------||--//
-void NiftiReader(std::string fin_1) 
+//vtkSmartPointer<vtkImageData> 
+vtkImageData* NiftiReader(std::string fin_1) 
 {
     /*
         - HAVE_ZLIB ->  zlib.h, zd.lib 
@@ -123,10 +127,10 @@ void NiftiReader(std::string fin_1)
 
     log_nifti_descriptives(nii); 
 
-    //nii->data[i]; 
     IterateNiftiData(nii); 
-    SaveVTIFromNifti(nii); 
-    //return 1; 
+    return SaveVTIFromNifti(nii); 
+    //vtkSmartPointer<vtkImageData> vti = SaveVTIFromNifti(nii); 
+    //return vti; 
 }
 
 
@@ -214,21 +218,21 @@ class VtkGrid
 
     void PlaneGet() 
     {
+        
         std::vector<double> normal = {1.0, 0.0, 0.0}; 
 
         std::vector<double> orig = GetGeometricCenter(obj); 
         PrintVector(orig); 
 
         vtkDataObject *cutter = CutterPlane(obj, orig, normal); 
-        //vtkDataObject *cutter2 = Cutter(obj, GetFuntionPlane({2.0,0.0,0.01},{1.0,0.0,0.0}) ); assert(cutter2);
-
+/*
         std::vector<std::vector<double>> coords = GetCoords(cutter);
         std::cout << "\t [cutter] n_coords : "<< coords.size() <<" \n";
 
         std::vector<unsigned char> cellTypes;
         std::vector<std::vector<vtkIdType>> cellVertices;
         GetCellsList(cutter, cellVertices, cellTypes);  
-
+*/
         std::string fname = "cutter"; 
         PWriterSerial(cutter, fname); 
     }
@@ -267,7 +271,6 @@ class VtkGrid
         }
     }
 
-
     private: 
         int nDim ;
         int nCells ;
@@ -280,6 +283,42 @@ class VtkGrid
 
 
 //--------------------------------------------------------------------------||--//
+namespace SpicyTech {
+
+    Nifti::~Nifti()
+    {
+        if(manager)
+        {
+            delete manager; 
+        }
+    }
+
+
+    Nifti::Nifti()
+    {
+        VersionShow(); 
+
+        manager = new VtkGrid<vtkImageData>();
+    }
+
+
+    void Nifti::LoadFile(std::string directory) 
+    {
+        vtkImageData* vti = NiftiReader(directory); 
+        manager->MeshSet(vti); 
+    }
+
+
+    void Nifti::CutCreate() 
+    {
+        if(!manager) return; 
+        manager->PlaneGet(); 
+    }
+
+
+} // SpicyTech
+
+
 //--------------------------------------------------------------------------||--//
 namespace SpicyTech {
 
@@ -297,13 +336,7 @@ namespace SpicyTech {
     }
 
 
-    void Dicom::LoadNifti(std::string directory) 
-    {
-        NiftiReader(directory); 
-    }
-
-
-    void Dicom::LoadDicom(std::string directory) 
+    void Dicom::LoadFile(std::string directory) 
     {
         vtkSmartPointer<vtkImageData> vti; 
         vti = ReadDICOMSeries(directory); 
