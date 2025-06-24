@@ -44,14 +44,18 @@ public class wrapper
         {
             string directory = "F:\\z2025_1\\Dicom\\NII\\BRATS_001.nii.gz";
             nifti.LoadFile( directory ); 
-            nifti.CutCreate(); 
+            nifti.CutCreate("voxel"); 
         }
 
         using (Nifti nifti = new Nifti())
         {
             string directory = "F:\\z2025_1\\Dicom\\NII\\1.2.826.0.1.3680043.10633.nii"; 
             nifti.LoadFile( directory ); 
-            nifti.CutCreate(); 
+            nifti.CutCreate("voxel"); 
+            nifti.CutSave("cutter_yz"); 
+
+            nifti.CutUpdate(0.0f,0.0f,0.0f, 0.0f,0.0f,1.0f); 
+            nifti.CutSave("cutter_xy"); 
         }
 
         Console.WriteLine("[Tester] NiftiTest Done!!");

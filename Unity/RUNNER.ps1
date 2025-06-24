@@ -78,9 +78,9 @@ function RunmeTest
   -FilePath "nifti.vti" `
   -ExpectedHash "2059CB1D1959D97C647945315288DCF3BF403AB625BE5346D85A947BB921B32D" 
 
-  ## Get-FileHash -Algorithm SHA256 -Path .\Unity\Assets\cutter.vtp
+  ## Get-FileHash -Algorithm SHA256 -Path .\Unity\Assets\cutter_yz.vtp
   Verify-FileHash `
-  -FilePath "cutter.vtp" `
+  -FilePath "cutter_yz.vtp" `
   -ExpectedHash "AC9FC1B9771A51E5082C67DEF34A0B8674E5FE909F6AC5C595EC48976CE972F3" 
 
   echo "F:\z2025_1\ParaView600\bin\paraview.exe .\Unity\Assets\nifti.vti"
