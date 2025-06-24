@@ -37,7 +37,53 @@ function SWIG_SETUP
 
 
 <#---------------------------------------------------------------------------------------------#>
+function Verify-FileHash 
+{
+  ## Get-FileHash  -Algorithm SHA256 -Path .\Actions\Tests\Dicom\nifti.vti 
+  param (
+      [Parameter(Mandatory = $true)][string]$FilePath, 
+      [Parameter(Mandatory = $true)][string]$ExpectedHash
+  )
+
+  $actualHash = (Get-FileHash -Path $FilePath -Algorithm SHA256).Hash
+  if ($actualHash -ne $ExpectedHash) {
+      Write-Host "[RUNNER] '${FilePath}' fails!!"
+      Set-Location -Path ${EXECUTION_PATH}
+      exit 1
+  } else {
+      Write-Host "[RUNNER] '${FilePath}' verified!!"
+  }
+}
+
+
 <#---------------------------------------------------------------------------------------------#>
+<#---------------------------------------------------------------------------------------------#>
+
+function RunmeTest 
+{
+  param([string]$Path) 
+  Set-Location -Path ${Path}  
+
+  pwd 
+
+  $TestPath="runme.exe"
+  if (Test-Path  $TestPath){Remove-Item -Recurse -Force  $TestPath}
+
+  csc.exe /platform:x64 /target:exe /unsafe /out:runme.exe `
+  $SCRIPT_PATH\Assets\Plugins\*.cs  `
+  $SCRIPT_PATH\Sources\runme.cs 
+
+  .\runme.exe
+  
+  ## Get-FileHash -Algorithm SHA256 -Path .\Actions\Tests\Dicom\nifti.vti 
+  Verify-FileHash `
+  -FilePath "nifti.vti" `
+  -ExpectedHash "5A3C264E13B887F16B69DFF91495136BB37C3CB05A7020A3B8EA5C9E7BAA7191" 
+
+  ##Set-Location -Path ${EXECUTION_PATH}; exit  
+}
+
+
 function COMPILATION
 {
   param([string]$RootPath) 
@@ -46,38 +92,31 @@ function COMPILATION
 
   Set-Location -Path $SCRIPT_PATH
 
-  #$ExecutablePath="Execs"
-  #if (Test-Path  $ExecutablePath){Remove-Item -Recurse -Force  $ExecutablePath}
+  $AssestPath="$SCRIPT_PATH/Assets"
+  if (Test-Path  $AssestPath){Remove-Item -Recurse -Force  $AssestPath}
 
-  $CompilationPath="Build"
+  $CompilationPath="$SCRIPT_PATH/Build"
   if (Test-Path  $CompilationPath){Remove-Item -Recurse -Force  $CompilationPath}
   New-Item -ItemType Directory -Path ${CompilationPath}  
   Set-Location -Path ${CompilationPath} 
   Get-ChildItem
 
-$SOURCES_DIR="F:\z2025_1\Dicom\DecafPV560\Actions\Tests\Dicom"
-$SOURCES_DIR = $SOURCES_DIR -replace '\\', '/'
+$SOURCES_DIR="F:/z2025_1/Dicom/DecafPV560/Actions/Tests/Dicom"
+$ZLIB_ROOT="F:/z2025_1/Dicom/zlib/Execs"
 
-  cmake.exe -S "$SCRIPT_PATH/Sources" `
+  cmake.exe -S "$SCRIPT_PATH/Sources" -Wno-dev `
   -G "Ninja" `
   -B . `
   -DCMAKE_INSTALL_PREFIX="$ExecutablePath" `
   -DParaView_DIR="$PV_DIR" `
-  -DSOURCES_DIR="$SOURCES_DIR"
+  -DSOURCES_DIR="$SOURCES_DIR" `
+  -DZLIB_ROOT="$ZLIB_ROOT"
 
-  cmake.exe --build . --config Release 
-  cd $SCRIPT_PATH
+#Set-Location -Path ${EXECUTION_PATH}; exit  
 
-  csc.exe /platform:x64 /target:exe /unsafe /out:Test/runme.exe `
-  Assets\Plugins\*.cs  `
-  Sources\runme.cs 
+  cmake.exe --build . --config Release #--verbose 
 
-  .\runme.exe
-
-  #cmake.exe --build  $CompilationPath --config Release 
-  #cmake.exe --build  $CompilationPath --target test --config Release
-  #cmake.exe --install  $CompilationPath --config Release
-  #& ".\${ExecutablePath}\bin\SpicyTech.exe"
+  RunmeTest -Path $AssestPath
 
   Set-Location -Path ${EXECUTION_PATH} 
 } 
