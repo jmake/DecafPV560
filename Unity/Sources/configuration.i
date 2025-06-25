@@ -5,14 +5,17 @@
 %}
 
 %include "std_vector.i"
-%template(FloatVector) std::vector<float>;
-
+%template(VectorInt) std::vector<int>;
+%template(VectorFloat) std::vector<float>;
 
 %include "typemaps.i"
 %include "arrays_csharp.i"
 
-%apply float INOUT[] { float* outArray1 };
-%apply int INOUT[] { int* outArray2 };
+%apply float INOUT[] { float* arrayFloat1 };
+%apply float INOUT[] { float* arrayFloat2 };
+%apply   int INOUT[] {   int* arrayInt1 };
+%apply   int INOUT[] {   int* arrayInt2 };
+
 
 %include "std_string.i"
 

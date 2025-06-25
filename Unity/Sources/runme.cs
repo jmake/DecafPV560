@@ -51,11 +51,25 @@ public class wrapper
         {
             string directory = "F:\\z2025_1\\Dicom\\NII\\1.2.826.0.1.3680043.10633.nii"; 
             nifti.LoadFile( directory ); 
+
             nifti.CutCreate("voxel"); 
             nifti.CutSave("cutter_yz"); 
 
+            nifti.ContourCreate("voxel"); 
+            nifti.ContourSave("contour_a"); 
+
+            int[] dimensions = {0, 0, 0}; 
+            nifti.ContourDimensions(dimensions); 
+            Console.WriteLine($"[Tester] n_indices:{dimensions[0]} n_vertices:{dimensions[1]} n_property:{dimensions[2]} "); 
+
+            int[] indices = new int[dimensions[0]]; 
+            float[] vertices = new float[dimensions[1]]; 
+            float[] property = new float[dimensions[2]]; 
+            nifti.ContourGeometry(indices, vertices, property); 
+
             nifti.CutUpdate(0.0f,0.0f,0.0f, 0.0f,0.0f,1.0f); 
             nifti.CutSave("cutter_xy"); 
+
         }
 
         Console.WriteLine("[Tester] NiftiTest Done!!");
