@@ -37,7 +37,6 @@
 #include <vtkXMLUnstructuredGridWriter.h>
 
 #include <vtkNew.h>
-#include <vtkSmartPointer.h>
 #include <vtkCompleteArrays.h>
 
 #include <vtkBox.h>
@@ -59,9 +58,11 @@
 #include <vtkCellType.h>
 #include <vtkCell.h>
 #include <vtkIdList.h>
-#include <vtkSmartPointer.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkPolyData.h>
+
+#include <vtkSmartPointer.h>
+//vtkSmartPointer<vtkContourFilter> contourFilter = vtkSmartPointer<vtkContourFilter>::New(); // SEGMENTATION!!
 
 
 #include <vector>
@@ -76,8 +77,252 @@
 #include <vtkDataArray.h>
 #include <vector>
 
+#include <vtkKMeansStatistics.h>
+
+#include <vtkSmartPointer.h>
+#include <vtkImageData.h>
+#include <vtkPoints.h>
+#include <vtkTable.h>
+#include <vtkDoubleArray.h>
+#include <vtkKMeansStatistics.h>
+#include <vtkVariantArray.h>
+#include <vtkIntArray.h>
+#include <vtkFieldData.h>
+#include <vtkPointData.h>
+#include <vtkNew.h>
+#include <vtkMath.h>
 
 //--------------------------------------------------------------------------||--//
+
+
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
+vtkImageData* RunKMeansOnImageDataPoints(vtkImageData* image, int numClusters)
+{
+  std::cout << "[RunKMeansOnImageDataPoints] ...";
+
+  if (!image || numClusters < 1) {
+      std::cerr << "[RunKMeansOnImageDataPoints] Invalid input." << std::endl;
+      return nullptr;
+  }
+
+  int dims[3];
+  double spacing[3];
+  double origin[3];
+  image->GetDimensions(dims);
+  image->GetSpacing(spacing);
+  image->GetOrigin(origin);
+
+  vtkNew<vtkTable> table;
+  vtkNew<vtkDoubleArray> xArr;
+  vtkNew<vtkDoubleArray> yArr;
+  vtkNew<vtkDoubleArray> zArr;
+
+  xArr->SetName("X");
+  yArr->SetName("Y");
+  zArr->SetName("Z");
+
+  table->AddColumn(xArr);
+  table->AddColumn(yArr);
+  table->AddColumn(zArr);
+
+  for (int z = 0; z < dims[2]; ++z)
+      for (int y = 0; y < dims[1]; ++y)
+          for (int x = 0; x < dims[0]; ++x)
+          {
+              double px = origin[0] + x * spacing[0];
+              double py = origin[1] + y * spacing[1];
+              double pz = origin[2] + z * spacing[2];
+
+              vtkNew<vtkVariantArray> row;
+              row->InsertNextValue(px);
+              row->InsertNextValue(py);
+              row->InsertNextValue(pz);
+              table->InsertNextRow(row);
+          }
+
+  vtkNew<vtkKMeansStatistics> kmeans;
+  kmeans->SetInputData(vtkStatisticsAlgorithm::INPUT_DATA, table);
+  kmeans->SetColumnStatus("X", 1);
+  kmeans->SetColumnStatus("Y", 1);
+  kmeans->SetColumnStatus("Z", 1);
+  kmeans->RequestSelectedColumns();
+  kmeans->SetAssessOption(true);
+  kmeans->SetDefaultNumberOfClusters(numClusters);
+  kmeans->Update();
+
+  vtkTable* assessedTable = kmeans->GetOutput(1);
+  vtkAbstractArray* labels = assessedTable->GetColumnByName("kmeans cluster");
+
+  if (!labels) {
+      std::cerr << "[RunKMeansOnImageDataPoints] Failed to get cluster labels." << std::endl;
+      return nullptr;
+  }
+
+  vtkNew<vtkIntArray> clusterLabels;
+  clusterLabels->SetName("KMeansLabels");
+  clusterLabels->SetNumberOfComponents(1);
+  clusterLabels->SetNumberOfTuples(labels->GetNumberOfTuples());
+
+  for (vtkIdType i = 0; i < labels->GetNumberOfTuples(); ++i) {
+      clusterLabels->SetValue(i, labels->GetVariantValue(i).ToInt());
+  }
+
+  image->GetPointData()->AddArray(clusterLabels);
+
+  std::cout << "[RunKMeansOnImageDataPoints] Done!!";
+  return image;
+}
+
+
+//--------------------------------------------------------------------------||--//
+void RunKMeansOnScalarArray(vtkDataObject* obj, const std::string& arrayName, int numClusters)
+{
+    std::cout << "[RunKMeansOnScalarArray] Clustering array: " << arrayName << "...\n";
+
+    vtkPolyData* poly = vtkPolyData::SafeDownCast(obj);
+    if (!poly || !poly->GetPointData())
+    {
+        std::cerr << "[RunKMeansOnScalarArray] Invalid vtkPolyData or missing PointData.\n";
+        return;
+    }
+
+    vtkDataArray* dataArray = poly->GetPointData()->GetArray(arrayName.c_str());
+    if (!dataArray)
+    {
+        std::cerr << "[RunKMeansOnScalarArray] Array '" << arrayName << "' not found.\n";
+        return;
+    }
+
+    vtkIdType nPoints = dataArray->GetNumberOfTuples();
+    if (nPoints == 0)
+    {
+        std::cerr << "[RunKMeansOnScalarArray] Array has no data.\n";
+        return;
+    }
+
+    // Build VTK table with 1 column from the selected array
+    vtkNew<vtkTable> table;
+    vtkNew<vtkDoubleArray> scalarColumn;
+    scalarColumn->SetName(arrayName.c_str());
+    scalarColumn->SetNumberOfTuples(nPoints);
+
+    for (vtkIdType i = 0; i < nPoints; ++i)
+        scalarColumn->SetValue(i, dataArray->GetComponent(i, 0));
+
+    table->AddColumn(scalarColumn);
+
+    // Set up KMeans
+    vtkNew<vtkKMeansStatistics> kmeans;
+    kmeans->SetInputData(vtkStatisticsAlgorithm::INPUT_DATA, table);
+    kmeans->SetColumnStatus(arrayName.c_str(), 1);
+    kmeans->RequestSelectedColumns();
+    kmeans->SetAssessOption(true);
+    kmeans->SetDefaultNumberOfClusters(numClusters);
+    kmeans->Update();
+
+    vtkTable* result = kmeans->GetOutput();
+    vtkAbstractArray* clusterColumn = result->GetColumnByName("kmeans");
+    if (!clusterColumn)
+    {
+        std::cerr << "[RunKMeansOnScalarArray] Missing 'kmeans' column in output.\n";
+        return;
+    }
+
+    // Create and assign cluster label array
+    vtkNew<vtkIntArray> clusterLabels;
+    clusterLabels->SetName("ClusterLabels");
+    clusterLabels->SetNumberOfComponents(1);
+    clusterLabels->SetNumberOfTuples(nPoints);
+
+    for (vtkIdType i = 0; i < nPoints; ++i)
+        clusterLabels->SetValue(i, static_cast<int>(clusterColumn->GetVariantValue(i).ToInt()));
+
+    poly->GetPointData()->AddArray(clusterLabels);
+    poly->GetPointData()->SetActiveScalars("ClusterLabels");
+
+    std::cout << "[RunKMeansOnScalarArray] Done.\n";
+}
+
+
+void RunKMeansOnPolyDataWithLabels(vtkDataObject* obj, int numClusters)
+{
+  std::cout << "[RunKMeansOnPolyDataWithLabels] ...";
+
+    vtkPolyData* poly = vtkPolyData::SafeDownCast(obj);
+    if (!poly || !poly->GetPoints())
+    {
+        std::cerr << "[RunKMeans] Invalid vtkPolyData or missing points.\n";
+        return;
+    }
+
+    vtkPoints* pts = poly->GetPoints();
+    vtkIdType nPoints = pts->GetNumberOfPoints();
+
+    vtkNew<vtkTable> table;
+    vtkNew<vtkDoubleArray> arrX;
+    vtkNew<vtkDoubleArray> arrY;
+    vtkNew<vtkDoubleArray> arrZ;
+
+    arrX->SetName("X");
+    arrY->SetName("Y");
+    arrZ->SetName("Z");
+
+    arrX->SetNumberOfTuples(nPoints);
+    arrY->SetNumberOfTuples(nPoints);
+    arrZ->SetNumberOfTuples(nPoints);
+
+    for (vtkIdType i = 0; i < nPoints; ++i)
+    {
+        double p[3];
+        pts->GetPoint(i, p);
+        arrX->SetValue(i, p[0]);
+        arrY->SetValue(i, p[1]);
+        arrZ->SetValue(i, p[2]);
+    }
+
+    table->AddColumn(arrX);
+    table->AddColumn(arrY);
+    table->AddColumn(arrZ);
+
+    vtkNew<vtkKMeansStatistics> kmeans;
+    kmeans->SetInputData(vtkStatisticsAlgorithm::INPUT_DATA, table);
+    kmeans->SetColumnStatus("X", 1);
+    kmeans->SetColumnStatus("Y", 1);
+    kmeans->SetColumnStatus("Z", 1);
+    kmeans->RequestSelectedColumns();
+    kmeans->SetAssessOption(true);
+    kmeans->SetDefaultNumberOfClusters(numClusters);
+    kmeans->Update();
+
+    vtkTable* result = kmeans->GetOutput();
+
+    // Extract "kmeans" column and map to vtkIntArray
+    vtkAbstractArray* clusterColumn = result->GetColumnByName("kmeans");
+    if (!clusterColumn)
+    {
+        std::cerr << "\n[RunKMeans] Missing 'kmeans' column in result.\n";
+        return;
+    }
+
+    vtkNew<vtkIntArray> clusterLabels;
+    clusterLabels->SetName("ClusterLabels");
+    clusterLabels->SetNumberOfComponents(1);
+    clusterLabels->SetNumberOfTuples(nPoints);
+
+    for (vtkIdType i = 0; i < nPoints; ++i)
+    {
+        clusterLabels->SetValue(i, static_cast<int>(clusterColumn->GetVariantValue(i).ToInt()));
+    }
+
+    // Assign to point data
+    poly->GetPointData()->AddArray(clusterLabels);
+    poly->GetPointData()->SetActiveScalars("ClusterLabels");
+
+  std::cout << "[RunKMeansOnPolyDataWithLabels] Done!!";
+}
+
+
 //--------------------------------------------------------------------------||--//
 vtkDataObject* TriangulateGet(vtkDataObject* obj)
 {
@@ -207,14 +452,6 @@ std::vector<std::vector<double>> GetCoords(vtkDataObject* obj)
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
-void VtkWarning( std::string fname )
-{
-  vtkFileOutputWindow *outwin = vtkFileOutputWindow::New();
-  outwin->SetFileName( fname.c_str() );    
-  outwin->SetInstance(outwin);
-}
-
-
 template <typename T>
 void PrintVector(const std::vector<T>& vec)
 {
@@ -281,16 +518,15 @@ vtkDataObject* CutterPlane(
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
-vtkDataObject* GetContour(vtkDataObject *input, std::string key, double threshold)
+vtkDataObject* GetContour(vtkDataObject *input, std::string key, double threshold, bool scalars)
 {
-//vtkSmartPointer<vtkContourFilter> contourFilter = vtkSmartPointer<vtkContourFilter>::New(); // SEGMENTATION!!
   vtkContourFilter* contourFilter = vtkContourFilter::New();
   contourFilter->SetInputData( input );
   contourFilter->SetValue(0,threshold);  // IsoSurface(0) = threshold
   contourFilter->SetInputArrayToProcess(0, 0, 0, 0, key.c_str() );
 
   contourFilter->GenerateTrianglesOn();
-  contourFilter->ComputeScalarsOff();
+  if(!scalars) contourFilter->ComputeScalarsOff();
   contourFilter->ComputeNormalsOff();
   contourFilter->Update();
 
@@ -343,11 +579,9 @@ void PWriterSerial(vtkDataObject* Obj, const std::string& name)
 }
 
 
-
 //--------------------------------------------------------------------------||--//
 vtkImageData* ReadVTIFile(const std::string& path)
 {
-    //auto reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
     vtkXMLImageDataReader *reader = vtkXMLImageDataReader::New(); 
     reader->SetFileName(path.c_str());
     reader->Update();
@@ -451,29 +685,6 @@ void PrintPointDataArrays(vtkPointData* pointData)
 }
 
 
-
-//--------------------------------------------------------------------------||--//
-void PrintSelf(vtkDataObject *vtkDataObject)
-{
-  vtkDataObject->PrintSelf(std::cout,vtkIndent(2));
-}
-
-
-//--------------------------------------------------------------------------||--//
-//--------------------------------------------------------------------------||--//
-void PrintDataObjectName(vtkDataObject *vtkDataObject)
-{
-  std::cout<<" GetClassName:'"<< vtkDataObject->GetClassName() <<"' "<<std::endl;
-}
-
-
-vtkDataObject* ExtractBlock( vtkCompositeDataSet *composite ) 
-{
-  //vtkCompositeDataSet *composite = reader->GetOutput();
-  vtkCompositeDataIterator* iter = composite->NewIterator();
-  return iter->GetCurrentDataObject(); 
-} 
-
 //--------------------------------------------------------------------------||--//
 //----------------------------------------|  FROM : E04_BOOST/nek5k01_01.cxx |--//
 template <typename T>
@@ -522,6 +733,7 @@ GetCppArray(vtkDataArray *vtk_array, int* rows=NULL, int* cols=NULL, std::string
 
 
 //--------------------------------------------------------------------------||--//
+/*
 std::vector<double> GetPointsArray(vtkDataObject *Obj, int print=1)
 {
   // 
@@ -551,16 +763,13 @@ std::vector<double> GetPointsArray(vtkDataObject *Obj, int print=1)
     } 
   } 
 
-//std::cout<<"[GetPointsArray] nPts:"<< nPts <<" \n";
   return array;
 }
-
-
-
-//--------------------------------------------------------------------------||--//
+*/
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
+/*
 class Analysis
 {
   public :
@@ -667,14 +876,6 @@ class Analysis
 
     std::vector<double> Array( Arrays[key] );  
     size_t ncols = (Array.size()==rows)?(1):( Array.size()/rows );
- /*
-    std::cout<< "Array.size:" << Array.size() <<" \n";   
-    std::cout<< "rows:" << rows <<" \n"; 
-    std::cout<< "ncols:" << ncols <<" \n"; 
-    std::cout<< "icol:" << icol <<" \n";
-    std::cout<< "key:" <<  key <<" \n";
-exit(0);
- */
     assert( icol + 1 <= ncols ); 
 
     double *begin = Array.data() + rows * (icol+0);
@@ -683,7 +884,6 @@ exit(0);
     std::vector<double> array(rows, std::numeric_limits<double>::max() ); 
     for(int i=0; i<rows; i++) array[i] = begin[i];//  Array.data() + rows * icol + i;
     return array;  
-//    return std::vector<double>(begin,end); 
   }
 
 
@@ -696,6 +896,7 @@ exit(0);
   int rows, cols;
 
 };
+*/
 /*
   Analysis analysis = Analysis();
   analysis.SetPoints( polyData->GetPoints() );
@@ -703,109 +904,399 @@ exit(0);
   //analysis.SetArray(  polyData->GetPointData(), "Velocity");
 */
 
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
+void VersionShow()
+{
+    std::cout << "[SpicyTech] VTK version: " << vtkVersion::GetVTKVersion() << std::endl;
+}
+
+
+void PrintSelf(vtkDataObject *vtkDataObject)
+{
+  vtkDataObject->PrintSelf(std::cout,vtkIndent(2));
+}
+
+
+void VtkWarning( std::string fname )
+{
+  vtkFileOutputWindow *outwin = vtkFileOutputWindow::New();
+  outwin->SetFileName( fname.c_str() );    
+  outwin->SetInstance(outwin);
+}
+
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
+vtkSmartPointer<vtkImageData> 
+ReadDICOMSeries(const std::string& path) 
+{
+    auto reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+    reader->SetDirectoryName(path.c_str());
+    reader->Update();
 
+    std::cout << "GetStudyUID: " << reader->GetStudyUID() << std::endl;
+    std::cout << "GetPatientName: " << reader->GetPatientName() << std::endl;
+    std::cout << "GetNumberOfComponents: " << reader->GetNumberOfComponents() << std::endl;
 
+    vtkImageData* image = reader->GetOutput();
+    std::cout << "GetNumberOfScalarComponents: " << image->GetNumberOfScalarComponents() << std::endl;
 
+    return image;
+}
 
-//--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
 /*
-void GetVtkDataObjectMaxMin(vtkDataObject *dataObject)
+void _Cutter(
+                    vtkDataObject *obj, 
+                    std::vector<double> orig, 
+                    std::vector<double> normal, 
+                    std::string key
+                 ) 
 {
-  vtkMPIController *contr = vtkMPIController::New();
-  contr->Initialize(NULL, NULL, 1); // initializedExternally == 1;
-  int nranks = contr->GetNumberOfProcesses();
-  int rank   = contr->GetLocalProcessId();
+    // C# : 
+    //      int[] triangles
+    //  Vector3[] meshVertices = new Vector3[nbVertices];
+    //
+    //   indices -> [ v11,v12,...,v1M, v21,v22,....v2M, ..., vN1,vN2,...,vNM ];
+    // triangles -> [ v11,v12,v13, v21,v22,v23, ..., vN1,vN2,vN3 ]; 
+    //  vertices -> { {x1,y1,z1}, {x2,y2,z2}, ..., {xM,yM,zM} };
+    // 
+    normal = {1.0, 0.0, 0.0}; 
+    orig = GetGeometricCenter(obj); 
 
-  assert( dataObject->IsA("vtkUnstructuredGrid") ); //dataObject->PrintSelf(std::cout,vtkIndent(2)); //exit(0);
-  //PrintDataObjectName( dataObject );  
+    vtkDataObject *cutter = CutterPlane(obj, orig, normal); 
+    vtkPolyData* vtp = static_cast<vtkPolyData*>(cutter);
 
-  Analysis analysis = Analysis(); // vtktools.hpp   
+    int n_rows = -1; 
+    int n_cols = -1; 
+    std::vector<float> vertices = GetCppArray<float>( vtp->GetPoints()->GetData(), &n_rows, &n_cols); 
 
-  if( dataObject->IsA("vtkUnstructuredGrid") )
-    analysis.SetPoints( vtkUnstructuredGrid::SafeDownCast(dataObject)->GetPoints() );
-  //analysis.PrintArrays(false);
-  //analysis.SaveArray("x.y", "Coords");
+    int n_indices = -1; 
+    std::vector<int> indices = GetFlatCellIndices( vtp, n_indices );
 
-  int idMin = -1; 
-  int idMax = -1;
-  std::vector<double>::iterator result;
-  std::vector< std::vector<double> > range; 
-  for(int i=0; i<3; i++)
-  {
-    std::vector<double> array( analysis.GetComponent("Coords",i) );
-    result = std::min_element(array.begin(), array.end());
-    idMin  = std::distance(array.begin(), result);
 
-    result = std::max_element(array.begin(), array.end());
-    idMax  = std::distance(array.begin(), result);
+    vtkPointData* pointData = vtp->GetPointData(); 
+    std::vector<std::string> names = GetArrayNames(pointData); 
 
-    range.push_back( {array[idMin], array[idMax]} );
-  }
-
-  for(int i=0; i<range.size(); i++)
-    std::cout
-           <<"\t[GetVtkDataObjectMaxMin] "
-           << rank <<"."<< nranks <<":"
-	   <<" R"<< i <<" = "
-           <<"["<< range[i][0]   
-           <<","<< range[i][1] <<"] "
-           <<" \n";
-
+    //std::string key; 
+    if( Contains(names, key) )
+    {
+        vtkDataArray* array = GetPointDataArray(pointData, key);  
+        std::vector<float> vertices = GetCppArray<float>(array, &n_rows, &n_cols); 
+    }
 }
 */
-
-/*
-void PWriter1(vtkAlgorithmOutput *GetOutputPort, std::string name, std::string type)
+class ExtractorSlicer  
 {
-  std::string fname;
-  vtkXMLPDataWriter *parallel_writer = NULL;
+    public :
+    ~ExtractorSlicer()
+    {
+      if(vtp) 
+      {
+        vtp->Delete();
+        vtp = nullptr; 
+      } 
 
-  if( type == "vtkUnstructuredGrid")
+      if(array) 
+      {
+        array = nullptr; 
+      } 
+
+      if(vti) 
+      {
+        vti->Delete(); // ??
+        vti = nullptr; 
+      } 
+
+      indices.clear(); 
+      property.clear(); 
+      vertices.clear(); 
+    }
+
+
+    ExtractorSlicer()
+    {
+      vti = nullptr; 
+      vtp = nullptr; 
+      array = nullptr; 
+
+      indices.clear(); 
+      property.clear(); 
+      vertices.clear(); 
+    }
+
+
+    void Create(vtkDataObject *obj, std::string prop)
+    {
+      vti = static_cast<vtkImageData*>(obj);        
+      key = prop; 
+
+      orig = GetGeometricCenter(obj); 
+      __Update__({1.0,0.0,0.0}, orig);
+    }
+
+
+    void Update(std::vector<double> n0)
+    {
+      __Update__(n0, orig);
+    } 
+
+    
+    void __Update__(
+                      std::vector<double> normal, 
+                      std::vector<double> orig 
+                    )
+    {
+      vtkDataObject *cutter = CutterPlane(vti, orig, normal); 
+      //RunKMeansOnPolyDataWithLabels(cutter, 2); 
+
+      vtp = static_cast<vtkPolyData*>(cutter);
+
+      vtkPointData* pointData = vtp->GetPointData(); 
+
+      std::vector<std::string> names;  
+      names = GetArrayNames(pointData); 
+
+      if( Contains(names, key) )
+      {
+        //RunKMeansOnScalarArray(vtp, key, 2); 
+        array = GetPointDataArray(pointData, key);  
+      }
+
+      DataGet(); 
+      GeometryGet(); 
+    }
+
+
+    void DataGet()
+    {
+      if( vtp && array )
+      {
+          int n_rows = -1; 
+          int n_cols = -1; 
+
+          property = GetCppArray<float>(array, &n_rows, &n_cols); 
+          std::cout << "\t [Slicer] key:'"<< array->GetName() <<"' n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";        
+      }
+    }
+
+
+    void GeometryGet()
+    {
+      // C# : 
+      //      int[] triangles
+      //  Vector3[] meshVertices = new Vector3[nbVertices];
+      //
+      //   indices -> [ v11,v12,...,v1M, v21,v22,....v2M, ..., vN1,vN2,...,vNM ];
+      // triangles -> [ v11,v12,v13, v21,v22,v23, ..., vN1,vN2,vN3 ]; 
+      //  vertices -> { {x1,y1,z1}, {x2,y2,z2}, ..., {xM,yM,zM} };
+      // 
+      if( vtp && array )
+      {
+          int n_rows = -1; 
+          int n_cols = -1; 
+          vertices = GetCppArray<float>( vtp->GetPoints()->GetData(), &n_rows, &n_cols); 
+          std::cout << "\t [Slicer] n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";
+
+          int n_indices = -1; 
+          indices = GetFlatCellIndices( vtp, n_indices );
+          std::cout << "\t [Slicer] n_indices : "<< n_indices <<" \n";
+      }
+    }    
+
+
+    void Save(std::string fname)
+    {
+      if( vtp && array )
+      {
+          PWriterSerial(vtp, fname); 
+      }        
+    }
+
+
+    private : 
+    std::string key;  
+    std::vector<double> orig;  
+
+    vtkPolyData* vtp; 
+    vtkImageData* vti; 
+    vtkDataArray* array; 
+
+    std::vector<int> indices; 
+    std::vector<float> property; 
+    std::vector<float> vertices; 
+}; 
+
+
+//--------------------------------------------------------------------------||--//
+std::vector<double> RangeGet(vtkImageData *obj, std::string key) 
+{
+  std::vector<double> range(2, std::numeric_limits<double>::max()); 
+
+  vtkPointData* pd = obj->GetPointData(); 
+  std::vector<std::string> names = GetArrayNames(pd); 
+
+  if( Contains(names, key) )
   {
-    parallel_writer = vtkXMLPUnstructuredGridWriter::New();
-    fname = name + ".pvtu";
-  }
-  if( type == "vtkPolyData")
-  {
-    parallel_writer = vtkXMLPPolyDataWriter::New();
-    fname = name + ".pvtp";
+    vtkDataArray* ar = GetPointDataArray(pd, key);  
+    ar->GetRange(range.data()); 
+    std::cout <<"[RangeGet] range["<< key << "] : (" << range[0] <<", "<< range[1] <<") \n";
   }
 
-  vtkMPIController *contr = vtkMPIController::New(); 
-  //contr->Initialize(); //&argc, &argv, 1);
-  contr->Initialize(NULL, NULL, 1); // initializedExternally == 1;
-  int nranks = contr->GetNumberOfProcesses();
-  int rank   = contr->GetLocalProcessId();
-
-  if(!rank)  
-  std::cout
-  <<"\t'"<< fname <<"' " 
-  <<"rank:"<< rank 
-  <<"/"<< nranks
-  <<"\n";
-
-  // Create the parallel writer and call some functions
-//auto parallel_writer = vtkSmartPointer<vtkXMLPUnstructuredGridWriter>::New();
-  //if( GetOutputPort->IsA("vtkUnstructuredGrid") ) parallel_writer = vtkXMLPUnstructuredGridWriter::New(); 
-  //if( GetOutputPort->IsA("vtkPolyData") )    parallel_writer = vtkXMLPPolyDataWriter::New();   
-  assert(parallel_writer); 
-  parallel_writer->SetInputConnection( GetOutputPort );
-  parallel_writer->SetController(contr);
-  parallel_writer->SetFileName( fname.c_str() );
-  parallel_writer->SetNumberOfPieces(nranks);
-  parallel_writer->SetStartPiece(rank);
-  parallel_writer->SetEndPiece(rank);
-  parallel_writer->SetDataModeToBinary();
-  parallel_writer->Update();
-  parallel_writer->Write();
-
-  contr->Finalize(1);
+  return range; 
 }
-*/
+
+
+class ExtractorContour
+{
+    public :
+    ~ExtractorContour()
+    {
+      if(vtp) 
+      {
+        vtp->Delete();
+        vtp = nullptr; 
+      } 
+
+      if(array) 
+      {
+        array = nullptr; 
+      } 
+
+      if(vti) 
+      {
+        vti = nullptr; 
+      } 
+
+      indices.clear(); 
+      property.clear(); 
+      vertices.clear(); 
+    }
+
+
+    ExtractorContour()
+    {
+      vti = nullptr; 
+      vtp = nullptr; 
+      array = nullptr; 
+
+      indices.clear(); 
+      property.clear(); 
+      vertices.clear(); 
+
+      range.clear(); 
+    }
+
+
+    void Create(vtkDataObject *obj, std::string prop)
+    {
+      key = prop; 
+      vti = static_cast<vtkImageData*>(obj); 
+
+      range = RangeGet(vti, prop); 
+
+      double threshold = (range[0] + range[1]) * 0.5;
+      __Update__(threshold);
+    }
+
+
+    void Update(double threshold)
+    {
+      __Update__(threshold);
+    } 
+
+
+    void __Update__(double threshold)
+    {
+      bool getscalars = true; 
+      vtkDataObject* contour = GetContour(vti, key, threshold, getscalars); 
+      //vtkDataObject* trias = TriangulateGet(contour); 
+
+      vtp = static_cast<vtkPolyData*>( contour );
+      vtkPointData* pointData = vtp->GetPointData(); 
+
+      std::vector<std::string> names;  
+      names = GetArrayNames(pointData); 
+      if( Contains(names, key) )
+      {
+        array = GetPointDataArray(pointData, key);  
+      }
+
+      DataGet(); 
+      GeometryGet(); 
+    }
+
+
+    void DataGet()
+    {
+      if( vtp && array )
+      {
+        int n_rows = -1; 
+        int n_cols = -1; 
+
+        property = GetCppArray<float>(array, &n_rows, &n_cols); 
+        std::cout << "\t [Slicer] key:'"<< array->GetName() <<"' n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";        
+      }
+    }
+
+
+    void GeometryGet()
+    {
+      // C# : 
+      //      int[] triangles
+      //  Vector3[] meshVertices = new Vector3[nbVertices];
+      //
+      //   indices -> [ v11,v12,...,v1M, v21,v22,....v2M, ..., vN1,vN2,...,vNM ];
+      // triangles -> [ v11,v12,v13, v21,v22,v23, ..., vN1,vN2,vN3 ]; 
+      //  vertices -> { {x1,y1,z1}, {x2,y2,z2}, ..., {xM,yM,zM} };
+      // 
+      if( array )
+      {
+        int n_rows = -1; 
+        int n_cols = -1; 
+        vertices = GetCppArray<float>( vtp->GetPoints()->GetData(), &n_rows, &n_cols); 
+        std::cout << "\t [Slicer] n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";
+
+        int n_indices = -1; 
+        indices = GetFlatCellIndices( vtp, n_indices );
+        std::cout << "\t [Slicer] n_indices : "<< n_indices <<" \n";
+      }
+    }    
+
+
+    void Save(std::string fname)
+    {
+      if( vtp )
+      {
+        PWriterSerial(vtp, fname); 
+      }        
+    }
+
+    void IndicesGet(int* array) 
+    {
+      std::copy(indices.begin(), indices.end(), array);
+    }
+
+    
+    std::vector<int> indices; 
+    std::vector<float> property; 
+    std::vector<float> vertices; 
+
+    private : 
+    std::string key;  
+    std::vector<double> range;
+
+    vtkPolyData* vtp; 
+    vtkImageData* vti; 
+    vtkDataArray* array; 
+}; 
+
+
+//--------------------------------------------------------------------------||--//
+//--------------------------------------------------------------------------||--//
+
+
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
