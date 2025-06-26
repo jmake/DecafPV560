@@ -26,9 +26,9 @@
 
 //--------------------------------------------------------------------------||--//
 //--------------------------------------------------------------------------||--//
-vtkImageData* SaveVTIFromNifti(nifti_image* nii)
+vtkImageData* Nifti2Vti(nifti_image* nii)
 {
-    std::cout << "[SaveVTIFromNifti] ...\n";
+    std::cout << "[Nifti2Vti] ...\n";
 
     const uint32_t nt = nii->nt;
     const uint32_t nx = nii->nx;
@@ -66,11 +66,10 @@ vtkImageData* SaveVTIFromNifti(nifti_image* nii)
     image->SetSpacing(dX, dY, dZ);
     image->GetPointData()->SetScalars(vtk_data);
 
-
     //RunKMeansOnImageDataPoints(image, 2); 
-    PWriterSerial(image, "nifti"); 
+    //PWriterSerial(image, fname); 
 
-    std::cout << "[SaveVTIFromNifti] Done!!\n";
+    std::cout << "[Nifti2Vti] Done!!\n";
     return image;
 }
 
@@ -87,7 +86,7 @@ vtkImageData* NiftiReader(std::string fin_1)
     }
 
     log_nifti_descriptives(nii); 
-    return SaveVTIFromNifti(nii); 
+    return Nifti2Vti(nii); 
 }
 
 //--------------------------------------------------------------------------||--//
@@ -195,9 +194,9 @@ class VtkGrid
     }
 
 
-    void ContourUpdate(float threshold)
+    void ContourUpdate(float u0, float umin, float umax)
     {
-        contour->Update(threshold); 
+        contour->Update(u0, umin, umax); 
     }
 
 
@@ -216,41 +215,6 @@ class VtkGrid
         return contour->property;
     } 
 
-
-    /*
-    void SurfaceGet()
-    {
-        vtkPointData* pointData = obj->GetPointData(); 
-        std::vector<std::string> names = GetArrayNames(pointData); 
-
-        std::string key = "DICOMImage"; 
-        if( Contains(names, key) )
-        {
-            vtkDataArray* array = GetPointDataArray(pointData, key);  
-
-            std::vector<double> range(2);
-            array->GetRange(range.data()); 
-            std::cout << "\t range["<< key << "] : (" << range[0] <<", "<< range[1] <<") \n";
-            
-            double threshold = (range[0] + range[1]) * 0.5;
-            vtkDataObject* contour = GetContour(obj, key, threshold); 
-
-            std::vector<std::vector<double>> coords = GetCoords(contour);
-            std::cout << "\t n_coords["<< key << "] : "<< coords.size() <<" \n";
-
-            std::vector<unsigned char> cellTypes;
-            std::vector<std::vector<vtkIdType>> cellVertices;
-            GetCellsList(contour, cellVertices, cellTypes);  
-
-            std::string fname = "contour"; 
-            PWriterSerial(contour, fname); 
-        }
-        else 
-        {
-            PrintVector(names); 
-        }
-    }
-    */
 
     private: 
     int nDim;
@@ -292,6 +256,12 @@ namespace SpicyTech {
     }
 
 
+    void Nifti::VtiSave(std::string fname) 
+    {
+        manager->MeshSave(fname); 
+    }
+
+
     void Nifti::CutCreate(std::string key) 
     {
         if(!manager) return; 
@@ -327,10 +297,10 @@ namespace SpicyTech {
     }
 
 
-    void Nifti::ContourUpdate(float threshold)
+    void Nifti::ContourUpdate(float u0, float umin, float umax)
     {
         if(!manager) return; 
-        manager->ContourUpdate(threshold); 
+        manager->ContourUpdate(u0, umin, umax); 
     }
 
     
@@ -386,8 +356,7 @@ namespace SpicyTech {
         vti = ReadDICOMSeries(directory); 
 
         mesh->MeshSet(vti); 
-        mesh->MeshSave("test1"); 
-
+        //mesh->MeshSave("test1"); 
         //mesh->PlaneGet(); 
         //mesh->SurfaceGet(); 
     }

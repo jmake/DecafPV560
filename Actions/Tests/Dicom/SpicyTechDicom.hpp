@@ -39,6 +39,7 @@ namespace SpicyTech {
              Nifti(); 
 
             void LoadFile(std::string directory); 
+            void VtiSave(std::string fname);  
 
             void CutCreate(std::string key); 
             void CutSave(std::string key); 
@@ -46,7 +47,7 @@ namespace SpicyTech {
 
             void ContourCreate(std::string key); 
             void ContourSave(std::string key); 
-            void ContourUpdate(float threshold); 
+            void ContourUpdate(float u0, float umin, float umax); 
 
             void ContourDimensions(int* arrayInt1);
             void ContourGeometry(int* arrayInt1, float* arrayFloat1, float* arrayFloat2); 

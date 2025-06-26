@@ -1130,6 +1130,14 @@ class ExtractorSlicer
 
 
 //--------------------------------------------------------------------------||--//
+double MapValue(double u, double umin, double umax, double a, double b)
+{
+  //if (umax == umin) return a; // Avoid division by zero
+
+  return a + (b - a) * (u - umin) / (umax - umin);
+}
+
+
 std::vector<double> RangeGet(vtkImageData *obj, std::string key) 
 {
   std::vector<double> range(2, std::numeric_limits<double>::max()); 
@@ -1195,14 +1203,16 @@ class ExtractorContour
       vti = static_cast<vtkImageData*>(obj); 
 
       range = RangeGet(vti, prop); 
-
-      double threshold = (range[0] + range[1]) * 0.5;
-      __Update__(threshold);
     }
 
 
-    void Update(double threshold)
+    void Update(float u0, float umin, float umax)
     {
+      double threshold = MapValue(u0, umin, umax, range[0], range[1]); 
+
+      std::cout << "\t [ExtractorContour] [umin, umax] : ["<< 
+      umin <<","<< umax <<"] u0: "<< u0 <<" -> threshold:"<< threshold<<" \n";
+     
       __Update__(threshold);
     } 
 
@@ -1236,7 +1246,7 @@ class ExtractorContour
         int n_cols = -1; 
 
         property = GetCppArray<float>(array, &n_rows, &n_cols); 
-        std::cout << "\t [Slicer] key:'"<< array->GetName() <<"' n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";        
+        std::cout << "\t [ExtractorContour] key:'"<< array->GetName() <<"' n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";        
       }
     }
 
@@ -1256,11 +1266,11 @@ class ExtractorContour
         int n_rows = -1; 
         int n_cols = -1; 
         vertices = GetCppArray<float>( vtp->GetPoints()->GetData(), &n_rows, &n_cols); 
-        std::cout << "\t [Slicer] n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";
+        std::cout << "\t [ExtractorContour] n_rows : "<< n_rows <<" n_cols: "<< n_cols <<"\n";
 
         int n_indices = -1; 
         indices = GetFlatCellIndices( vtp, n_indices );
-        std::cout << "\t [Slicer] n_indices : "<< n_indices <<" \n";
+        std::cout << "\t [ExtractorContour] n_indices : "<< n_indices <<" \n";
       }
     }    
 
