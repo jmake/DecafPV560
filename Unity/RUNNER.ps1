@@ -83,6 +83,11 @@ function RunmeTest
   -FilePath "cutter_yz.vtp" `
   -ExpectedHash "AC9FC1B9771A51E5082C67DEF34A0B8674E5FE909F6AC5C595EC48976CE972F3" 
 
+  ## Get-FileHash -Algorithm SHA256 -Path .\Unity\Assets\contour_a.vtp
+  Verify-FileHash `
+  -FilePath "contour_a.vtp" `
+  -ExpectedHash "A933EAEFBC8891C2E74D3F6D25BDA19CEEAE4C9837BBDA49F5C8F0123E10219E" 
+
   echo "F:\z2025_1\ParaView600\bin\paraview.exe .\Unity\Assets\nifti.vti"
 
   ##Set-Location -Path ${EXECUTION_PATH}; exit  
