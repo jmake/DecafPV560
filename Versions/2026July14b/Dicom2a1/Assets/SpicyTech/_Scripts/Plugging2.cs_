@@ -1,0 +1,339 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+
+using System.Security.Cryptography;
+
+using SpicyTech;
+using UnityEngine;
+
+
+
+namespace SpicyTech {
+
+public struct Slicer
+{
+    public Vector3 center0;
+    public GameObject obj0; 
+
+    public Quaternion q0; 
+
+    public Vector3 normal0;
+    public Vector3 normalDinamic;
+    public Vector3 normalStatic;
+
+    public int a; 
+    public int b; 
+
+    public Slicer(Vector3 a, Vector3 b, GameObject go)
+    {
+        center0 = a;
+        normal0 = b;
+        normalDinamic = b; 
+        normalStatic = b; 
+
+        q0 = go.transform.rotation; 
+        obj0 = go; 
+
+        this.a = 0; 
+        this.b = 0; 
+    }
+
+
+    public Vector3 NormalUpdate() 
+    {
+        Vector3 up      = obj0.transform.up;      // Y-axis (0,1,0)
+        Vector3 right   = obj0.transform.right;   // X-axis (1,0,0)
+        Vector3 forward = obj0.transform.forward; // Z-axis (0,0,1) (default normal)
+
+        Quaternion q1 = obj0.transform.rotation; 
+        Quaternion delta = Quaternion.Inverse(q0) * q1;
+
+        Vector3 normal = delta * normal0; 
+        return normal; 
+    }
+
+} // Slicer
+
+
+public class SpicyManager 
+{
+    bool loaded = false; 
+    string key = "voxel"; 
+    double maxCells = 2 * Math.Pow(2,20); // 2 * (1 048 576)
+
+    NifftiLoader nifti = null; 
+
+    Dictionary<string, Slicer> planes = null; 
+    Dictionary<string, CutterManager> cutters = null;
+
+
+    public void Finish()
+    {
+        if(nifti != null) 
+        {
+            nifti.Finish(); 
+            nifti = null; 
+
+            Debug.Log($"[OnDisable] 'nifti' removed !!");
+        }
+
+        if (cutters != null)
+        {
+            foreach (var pair in cutters)
+            {
+                pair.Value.Finish();
+            }
+            cutters = null;
+        }
+    }
+
+
+    public void Create(string directory)
+    {
+        nifti = new NifftiLoader(); 
+
+        bool centered = true; 
+        loaded = nifti.LoadFile(directory, key, centered); 
+        if(loaded) 
+        {
+            Debug.Log($"[SpicyManager] directory: '{directory}' loaded !!");
+        } 
+        else
+        {
+            nifti = null; 
+            Debug.Log($"[SpicyManager] directory: '{directory}' fail !!");
+            return ; 
+        }
+    }
+
+
+
+    void AddLetter(GameObject parent, string letter, Vector3 localPos, Quaternion localRot, float characterSize)
+    {
+        var textObj = new GameObject("FaceLabel");
+        textObj.transform.parent = parent.transform;
+        textObj.transform.localPosition = localPos;
+        textObj.transform.localRotation = localRot;
+
+        var text = textObj.AddComponent<TextMesh>();
+        text.text = letter;
+        text.fontSize = 100;
+        text.characterSize = characterSize; // letter size
+        text.alignment = TextAlignment.Center;
+        text.anchor = TextAnchor.MiddleCenter;
+    }
+
+
+    GameObject AddCube(string name) 
+    {
+        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cube.name = name; 
+        cube.transform.position = Vector3.zero; 
+        cube.transform.localScale = Vector3.one * 20.0f; 
+        
+        cube.AddComponent<ObjectSelector>(); 
+        cube.GetComponent<Renderer>().material = new Material(Shader.Find("Custom/FaceColorByNormal"));
+        AddLetter(cube, "X", new Vector3(0.501f,     0f,     0f), Quaternion.Euler(0, -90, 0) , 0.5f);
+        AddLetter(cube, "Y", new Vector3(    0f, 0.501f,     0f), Quaternion.Euler(-90, 0, 0), 0.5f);
+        AddLetter(cube, "Z", new Vector3(    0f,     0f, 0.501f), Quaternion.identity        , 0.5f);
+
+        return cube; 
+    }
+
+
+    public void CuttersFixedUpdate()
+    {
+        if(planes == null) return ; 
+
+        foreach (var pair in planes)
+        {
+            var key = pair.Key;
+            var plane = pair.Value;
+            GameObject obj = plane.obj0; 
+
+            Vector3 normalNow = plane.NormalUpdate(); 
+
+            float diff = (plane.normalDinamic - normalNow).sqrMagnitude; 
+            if( diff < 0.001f )
+            {
+                //Debug.Log($"normal : {normalNow} == {plane.normalDinamic} ");
+            }
+            else
+            {
+                plane.normalDinamic = normalNow; 
+            }
+
+            //Debug.Log( diff ); 
+            //Debug.Log($"normal : {plane.normal0} -> {normalNow} {plane.normalDinamic} ");
+
+
+            {
+                CutterManager cutter = cutters[key];
+                VertexVisualizer mesh = obj.GetComponent<VertexVisualizer>();
+                //CutterUpdate(cutter, mesh, normal); 
+            }
+
+        }
+    } 
+
+
+    public void CuttersCreate()
+    {
+        if(cutters != null) return ;
+
+        planes = new Dictionary<string, Slicer>();
+        cutters = new Dictionary<string, CutterManager>();
+
+        //CuttersAdd("xy_", Vector3.forward ); // (0, 0, 1) → world +Z
+        //CuttersAdd("x_z", Vector3.up      ); // (0, 1, 0) → world +Y
+        //CuttersAdd("_yz", Vector3.right   ); // (1, 0, 0) → world +X
+        CuttersAdd("xyz", new Vector3(1.0f,1.0f,1.0f) );
+
+        Debug.Log($"[SpicyManager] cutters created !!");
+    }
+
+
+    public CutterManager CuttersAdd(string name, Vector3 n0)
+    {
+        if(nifti == null) return null; 
+
+        // Unity Mesh
+        GameObject slicer = new GameObject(name);
+
+        VertexVisualizer mesh = slicer.AddComponent<VertexVisualizer>();
+        planes[name] = new Slicer(Vector3.zero, n0, slicer); 
+
+        // Controller 
+        Quaternion q = Quaternion.Euler(90, 0, 0); 
+        CubeController cubeController = slicer.AddComponent<CubeController>(); 
+        GameObject cube1 = cubeController.Create(name,q); 
+slicer.transform.SetParent( cube1.transform ); 
+
+        // Vtk Mesh 
+        CutterManager cutter = new CutterManager(); 
+        cutter.VtiSet( nifti.GetObj(), key); 
+        CutterUpdate(cutter, mesh, n0); //cutter.Save(name); 
+        cutters[name] = cutter;
+
+        slicer.transform.hasChanged = true;
+        return cutter; 
+    }
+
+
+    void CutterUpdate(CutterManager cutter, VertexVisualizer vv, Vector3 n0) 
+    {
+        bool centered = true; 
+        cutter.Update(n0.x, n0.y, n0.z, centered); 
+
+        int[] dimensions = {0, 0, 0}; 
+        cutter.DimensionsGet(dimensions); 
+
+        int n_indices = dimensions[0] / 3; 
+        int n_vertices = dimensions[1] / 3; 
+        int n_property = dimensions[2]; 
+        Debug.Log($"[CutterUpdate] n_indices:{n_indices} n_vertices:{n_vertices} n_property:{n_property} "); 
+
+        if(n_indices >  maxCells) 
+        {
+            Debug.Log($"[CutterUpdate] n_indices:{n_indices} > {maxCells}"); 
+            return; 
+        }
+
+        int[] triangles = new int[dimensions[0]]; 
+        float[] vertices = new float[dimensions[1]]; 
+        float[] property = new float[dimensions[2]]; 
+        cutter.GeometryGet(triangles, vertices, property); 
+        //return ;
+
+        vv.property = new float[property.Length];
+        Array.Copy(property, vv.property, property.Length);
+
+        vv.vertices = new float[vertices.Length];
+        Array.Copy(vertices, vv.vertices, vertices.Length);
+
+        vv.triangles = new int[triangles.Length];
+        Array.Copy(triangles, vv.triangles, triangles.Length);
+
+        vv.UpdateMesh(); 
+    }
+
+
+    VertexVisualizer MeshCreate(string name) 
+    {
+        GameObject go = new GameObject(name);
+        return go.AddComponent<VertexVisualizer>();
+    }
+
+
+} // SpicyManager
+
+
+} // SpicyTech
+
+
+public class Plugging2 : MonoBehaviour
+{
+    // n_indices:1_032_004 n_vertices:517_448, ~ 21 segs 
+    string niiFile = "1.2.826.0.1.3680043.10633.nii.gz"; 
+
+
+    void OnDisable()
+    {
+        manager.Finish(); 
+        manager = null; 
+    }
+
+
+    void FixedUpdate()
+    {
+        if (!isReady) return;
+
+        manager.CuttersCreate(); 
+        manager.CuttersFixedUpdate(); 
+    } 
+
+
+    void Start()
+    {
+//        Debug.Log($"running...");
+
+        gameObject.AddComponent<OnGUIThread>().Apply(this.Init, "Loading file ..."); 
+
+/*
+        gameObject.AddComponent<OnGUIThread>().Apply(
+            () => System.Threading.Tasks.Task.Run(() => this.Init())
+        , "Loading..."); 
+*/
+        //
+        //SpicyTech.Measure.ExecutionTime( Init, "[Start] "); 
+        //Init(); 
+        //StartCoroutine( Init() );
+        //gameObject.AddComponent<OnGUICoroutine>().Apply(Init, "message"); 
+        //
+//        Debug.Log($"done!");
+    }
+
+
+    //System.Collections.IEnumerator 
+    void Init()
+    {
+        //  n_indices:61_754 n_vertices:31_194, ~ 1.6 segs  
+        niiFile = "BRATS_001.nii"; 
+        
+        string niiPath = Path.Combine(Application.streamingAssetsPath, niiFile);
+
+        manager = new SpicyManager(); 
+        manager.Create(niiPath); 
+
+        //yield return null;
+        isReady = true; 
+    }
+
+
+    bool isReady = false;
+    SpicyManager manager = null; 
+}
