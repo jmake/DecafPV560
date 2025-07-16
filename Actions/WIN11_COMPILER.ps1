@@ -56,7 +56,12 @@ function CMAKE()
     ## -DCMAKE_CXX_FLAGS="/EHsc /D HAVE_SNPRINTF"
     ## C4996 -> -DCMAKE_CXX_FLAGS="/D_CRT_SECURE_NO_WARNINGS"
     ## 
+    ## - static library -> .lib / .a
+    ## - shared library -> .dll + .lib / .so 
+    ## 
     cmake.exe -S "${EXECUTION_PATH}/SRC" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_SHARED_LIBS=OFF `
             -G "Ninja" `
             -B $FolderName `
             -DCMAKE_INSTALL_PREFIX=Execs `
@@ -66,7 +71,6 @@ function CMAKE()
             -DCMAKE_C_COMPILER=cl `
             -DPARAVIEW_USE_ICE_T=OFF `
             -DPARAVIEW_USE_MPI=OFF `
-            -DBUILD_SHARED_LIBS=OFF `
             -DVTK_Group_ParaViewRendering=OFF `
             -DVTK_USE_X=OFF `
             -DVTK_OPENGL_HAS_OSMESA=OFF `
