@@ -1,0 +1,106 @@
+#import "SpicyContour4.hpp"
+
+
+namespace SpicyTech4 {
+
+    Contour3::~Contour3() 
+    {
+    }
+
+
+    Contour3::Contour3() 
+    {
+        vti = nullptr; 
+        vtp = nullptr; 
+    }
+    
+
+    void Contour3::Finish() 
+    {
+        if(vtp)
+        {
+            static_cast<vtkPolyData*>(vtp)->Delete(); 
+            vtp = nullptr; 
+        } 
+    }
+
+    void Contour3::SetVti(void* obj, std::string key, std::vector<float> range, double maxCells)
+    {
+        this->vti = obj; //static_cast<vtkImageData*>(obj);
+        this->key = key; 
+        this->range = range; 
+        this->maxCells = maxCells; 
+
+        std::cout << "\t+[Contour3] VtiSet : '" << static_cast<vtkPolyData*>(vti)->GetClassName() <<"' Ready! \n";
+    }
+
+
+    void Contour3::Update(double u0, bool centered)
+    {
+        if(vti == nullptr) return; 
+
+        if(vtp) static_cast<vtkPolyData*>(vtp)->Delete(); 
+
+        double threshold = MapValue(u0, 1e-6, 1.0, range[0], range[1]); 
+
+        bool getscalars = true; 
+        vtkDataObject* obj = GetContour(static_cast<vtkImageData*>(vti), key, threshold, getscalars); 
+
+        if(centered) obj = CenterAtOrigin(obj); 
+
+        //vtp = static_cast<vtkPolyData*>(obj); 
+        vtp = obj; 
+    }
+
+
+    void Contour3::SaveVtp(std::string fname)
+    {
+        if(vtp == nullptr) return ;
+
+        PWriterSerial(static_cast<vtkPolyData*>(vtp), fname); 
+    }
+
+
+    float* Contour3::GetVertices(int& n_rows, int& n_cols)
+    {
+        if(vtp == nullptr) return nullptr; 
+
+        vtkPoints* pts = static_cast<vtkPolyData*>(vtp)->GetPoints(); 
+        return GetCppArray3<float>(pts->GetData(), &n_rows, &n_cols); 
+    }
+
+
+    //template<typename T> fails!!
+    long long* Contour3::GetTriangles(int& n_indices, long long& n_raw)
+    {
+        if (vtp == nullptr) return nullptr;
+
+        vtkCellArray* cells = static_cast<vtkPolyData*>(vtp)->GetPolys();
+        if (cells == nullptr) return nullptr;
+
+        n_indices = static_cast<vtkPolyData*>(vtp)->GetNumberOfCells();
+
+        vtkIdTypeArray* data = cells->GetData();
+        if (data == nullptr) return nullptr;
+
+        if (data->GetNumberOfTuples() != static_cast<vtkPolyData*>(vtp)->GetNumberOfCells() * 4) {
+            std::cerr << "[Contour3] Assertion failed: tuple count does not match expected layout\n";
+            std::abort(); // o std::exit(EXIT_FAILURE);
+        }
+
+        vtkIdType* raw = data->GetPointer(0);
+        n_raw = data->GetNumberOfTuples();
+        //vtkIdType size = data->GetNumberOfTuples();
+        //n_raw = static_cast<long long>(size);
+
+        if (sizeof(vtkIdType) == sizeof(long long)) {
+            return reinterpret_cast<long long*>(raw);
+        } else {
+            std::cerr << "\t[GetTriangles] Unsafe cast vtkIdType* to " 
+                      << typeid(long long).name() << "* -> "
+                      << "Suggestion: use '" << SuggestTypeName() << "' as template parameter instead.\n";
+            return nullptr;
+        }
+    }
+
+} // namespace SpicyTech4
